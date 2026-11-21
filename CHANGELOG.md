@@ -3,6 +3,21 @@
 Her sürümün notları burada `## X.Y.Z` başlığı altında durur; sürüm iş akışı (.github/workflows/release.yml) GitHub
 sürüm notunu bu bölümden alır.
 
+## 0.1.2
+
+<!-- tr -->
+- Robz Hub kendini güncelledikten sonra, güncelleme için indirdiği kurulum dosyasını siler; indirilenler klasöründe yer kaplamaz.
+- Sırada bekleyen bir kurulumun ilerleme çubuğu artık boş durur; çubuk yalnız indirme, kapatma, kurma ve kaldırma sırasında hareket eder.
+
+<!-- en -->
+<details><summary>English</summary>
+
+- After updating itself, Robz Hub deletes the installer it downloaded for the update, so it no longer takes up space in the downloads folder.
+- A queued install's progress bar now stays empty; the bar only moves while downloading, closing, installing or uninstalling.
+
+</details>
+<!-- end -->
+
 ## 0.1.1
 
 <!-- tr -->
