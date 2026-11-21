@@ -10,7 +10,7 @@ use crate::catalog::{AppDef, InstallerType};
 use crate::error::{HubError, HubResult};
 use crate::version;
 use serde::Serialize;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
@@ -194,41 +194,73 @@ pub fn file_version(_path: &Path) -> Option<String> {
     None
 }
 
-/// Çalışan süreçlerin exe adları (küçük harf).
+/// Karşılaştırma için yol: küçük harf, ters eğik çizgi.
+pub fn norm_path(path: &str) -> String {
+    path.replace('/', "\\").to_lowercase()
+}
+
+/// Adı `names` içinde olan çalışan süreçler: tam exe yolu (norm_path) -> PID'ler.
+///
+/// Ad yetmez: aynı adla başka bir kopya çalışıyor olabilir (ör. geliştirme klasöründen açılmış bir derleme). Robz Hub
+/// yalnız kurulu kopyayı "çalışıyor" sayar ve yalnız onu kapatır. Yolu okunamayan süreçler (başka kullanıcının ya da
+/// sistemin) atlanır.
 #[cfg(windows)]
-pub fn running_images() -> HashSet<String> {
+pub fn running_paths(names: &[String]) -> HashMap<String, Vec<u32>> {
     use windows_sys::Win32::Foundation::{CloseHandle, INVALID_HANDLE_VALUE};
     use windows_sys::Win32::System::Diagnostics::ToolHelp::{
         CreateToolhelp32Snapshot, Process32FirstW, Process32NextW, PROCESSENTRY32W, TH32CS_SNAPPROCESS,
     };
+    use windows_sys::Win32::System::Threading::{
+        OpenProcess, QueryFullProcessImageNameW, PROCESS_NAME_WIN32, PROCESS_QUERY_LIMITED_INFORMATION,
+    };
 
-    let mut names = HashSet::new();
-    // SAFETY: anlık görüntü tanıtıcısı yalnız bu blokta kullanılır ve kapatılır.
+    let wanted: HashSet<String> = names.iter().map(|n| n.to_lowercase()).collect();
+    let mut found: HashMap<String, Vec<u32>> = HashMap::new();
+    // SAFETY: tanıtıcılar yalnız bu blokta kullanılır ve kapatılır; tamponların boyutu çağrıya verilir.
     unsafe {
         let snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
         if snapshot == INVALID_HANDLE_VALUE {
-            return names;
+            return found;
         }
         let mut entry: PROCESSENTRY32W = std::mem::zeroed();
         entry.dwSize = std::mem::size_of::<PROCESSENTRY32W>() as u32;
         let mut ok = Process32FirstW(snapshot, &mut entry);
         while ok != 0 {
             let len = entry.szExeFile.iter().position(|&c| c == 0).unwrap_or(entry.szExeFile.len());
-            names.insert(String::from_utf16_lossy(&entry.szExeFile[..len]).to_lowercase());
+            let name = String::from_utf16_lossy(&entry.szExeFile[..len]).to_lowercase();
+            if wanted.contains(&name) {
+                let process = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, entry.th32ProcessID);
+                if !process.is_null() {
+                    let mut buf = [0u16; 1024];
+                    let mut size = buf.len() as u32;
+                    if QueryFullProcessImageNameW(process, PROCESS_NAME_WIN32, buf.as_mut_ptr(), &mut size) != 0 {
+                        let path = String::from_utf16_lossy(&buf[..size as usize]);
+                        found.entry(norm_path(&path)).or_default().push(entry.th32ProcessID);
+                    }
+                    CloseHandle(process);
+                }
+            }
             ok = Process32NextW(snapshot, &mut entry);
         }
         CloseHandle(snapshot);
     }
-    names
+    found
 }
 
 #[cfg(not(windows))]
-pub fn running_images() -> HashSet<String> {
-    HashSet::new()
+pub fn running_paths(_names: &[String]) -> HashMap<String, Vec<u32>> {
+    HashMap::new()
 }
 
-pub fn is_running(exe: &str) -> bool {
-    running_images().contains(&exe.to_lowercase())
+/// Bu exe yolundan çalışan süreçlerin PID'leri.
+pub fn pids_of(exe_path: &str) -> Vec<u32> {
+    let name = Path::new(exe_path).file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default();
+    running_paths(&[name]).remove(&norm_path(exe_path)).unwrap_or_default()
+}
+
+/// Kurulu kopya çalışıyor mu?
+pub fn is_running(info: &InstallInfo) -> bool {
+    info.exe_path.as_deref().is_some_and(|exe| !pids_of(exe).is_empty())
 }
 
 // ---- algılama --------------------------------------------------------------------------------------------------------
@@ -273,9 +305,11 @@ pub fn detect(def: &AppDef) -> InstallInfo {
 
 // ---- çalıştırma -----------------------------------------------------------------------------------------------------
 
-async fn taskkill(exe: &str, force: bool) {
+async fn taskkill(pids: &[u32], force: bool) {
     let mut command = tokio::process::Command::new("taskkill.exe");
-    command.args(["/IM", exe]);
+    for pid in pids {
+        command.args(["/PID", &pid.to_string()]);
+    }
     if force {
         command.arg("/F");
     }
@@ -284,16 +318,19 @@ async fn taskkill(exe: &str, force: bool) {
     let _ = tokio::time::timeout(Duration::from_secs(10), command.status()).await;
 }
 
-/// Uygulamayı kapatır: önce penceresine kapanma isteği gönderilir; kapanmazsa (ör. tepsiye küçülüyorsa) sonlandırılır.
-pub async fn close_app(exe: &str) -> bool {
-    if !is_running(exe) {
-        return true;
-    }
+/// Kurulu kopyayı kapatır: önce penceresine kapanma isteği gönderilir; kapanmazsa (ör. tepsiye küçülüyorsa)
+/// sonlandırılır. Aynı adla başka bir yerden çalışan kopyalara dokunulmaz.
+pub async fn close_app(info: &InstallInfo) -> bool {
+    let Some(exe) = info.exe_path.as_deref() else { return true };
     for force in [false, true] {
-        taskkill(exe, force).await;
+        let pids = pids_of(exe);
+        if pids.is_empty() {
+            return true;
+        }
+        taskkill(&pids, force).await;
         for _ in 0..12 {
             tokio::time::sleep(Duration::from_millis(500)).await;
-            if !is_running(exe) {
+            if pids_of(exe).is_empty() {
                 return true;
             }
         }
@@ -375,6 +412,19 @@ mod tests {
         assert_eq!(uninstaller_from_string(r"C:\Apps\x\Uninstall.exe /S"), Some(PathBuf::from(r"C:\Apps\x\Uninstall.exe")));
         assert_eq!(uninstaller_from_string(r#""C:\Apps\x\run.bat""#), None);
         assert_eq!(uninstaller_from_string(""), None);
+    }
+
+    #[test]
+    fn matches_running_copies_by_full_path() {
+        let installed = r"C:\Users\a\AppData\Local\Programs\Robz Play\RobzPlay.exe";
+        assert_eq!(norm_path(installed), norm_path(r"c:/users/A/appdata/local/programs/robz play/robzplay.exe"));
+        // Aynı adla geliştirme klasöründen çalışan kopya kurulu kopya sayılmaz.
+        assert_ne!(norm_path(installed), norm_path(r"C:\Users\a\Desktop\RobzPlay\dist\RobzPlay\RobzPlay.exe"));
+        // Bu test sürecinin kendisi adıyla ve tam yoluyla bulunur.
+        let me = std::env::current_exe().unwrap();
+        let name = me.file_name().unwrap().to_string_lossy().to_string();
+        let found = running_paths(&[name]);
+        assert!(found.get(&norm_path(&me.to_string_lossy())).is_some_and(|pids| pids.contains(&std::process::id())));
     }
 
     #[test]

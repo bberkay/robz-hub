@@ -157,6 +157,11 @@ fn derive(def: &AppDef, app: &mut AppState) {
         && matches!((&app.latest, &app.install.version), (Some(l), Some(v)) if version::compare(&l.version, v).is_gt());
 }
 
+/// Kurulu kopyanın exe yolundan çalışan bir süreç var mı (running_paths sonucuna göre)?
+fn is_running_in(running: &HashMap<String, Vec<u32>>, info: &InstallInfo) -> bool {
+    info.installed && info.exe_path.as_deref().is_some_and(|exe| running.contains_key(&installs::norm_path(exe)))
+}
+
 fn tag_dir(tag: &str) -> String {
     tag.chars().map(|c| if c.is_ascii_alphanumeric() || "._-".contains(c) { c } else { '_' }).collect()
 }
@@ -282,14 +287,14 @@ impl Hub {
     /// Kurulum durumlarını yeniden okur (kayıt defteri, klasörler, çalışan süreçler).
     pub fn refresh_installs(&self) {
         let defs = self.lock().catalog.apps.clone();
-        let running = installs::running_images();
+        let running = installs::running_paths(&defs.iter().map(|d| d.windows.exe.clone()).collect::<Vec<_>>());
         let detected: Vec<InstallInfo> = defs.iter().map(installs::detect).collect();
         {
             let mut inner = self.lock();
             inner.installs_refreshed = Some(Instant::now());
             for (def, info) in defs.iter().zip(detected) {
                 if let Some(app) = inner.apps.get_mut(&def.id) {
-                    app.running = info.installed && running.contains(&def.windows.exe.to_lowercase());
+                    app.running = is_running_in(&running, &info);
                     app.install = info;
                     derive(def, app);
                 }
@@ -300,14 +305,15 @@ impl Hub {
 
     /// Yalnız "çalışıyor mu" bilgisini yeniler; değişiklik varsa haber verir.
     pub fn poll_running(&self) {
-        let running = installs::running_images();
+        let names: Vec<String> = self.lock().catalog.apps.iter().map(|d| d.windows.exe.clone()).collect();
+        let running = installs::running_paths(&names);
         let changed = {
             let mut inner = self.lock();
             let Inner { catalog, apps, .. } = &mut *inner;
             let mut changed = false;
             for def in &catalog.apps {
                 if let Some(app) = apps.get_mut(&def.id) {
-                    let now = app.install.installed && running.contains(&def.windows.exe.to_lowercase());
+                    let now = is_running_in(&running, &app.install);
                     changed |= now != app.running;
                     app.running = now;
                 }
@@ -606,15 +612,17 @@ impl Hub {
         working.then_some(None)
     }
 
-    async fn close_if_needed(&self, job: &QueuedJob, exe: &str) -> HubResult<()> {
-        if !installs::is_running(exe) {
+    /// Kurulu kopya açıksa: izin varsa kapatır, yoksa "app-running" hatası. Başka yerden çalışan aynı adlı kopyalara
+    /// (ör. geliştirme derlemesi) dokunulmaz.
+    async fn close_if_needed(&self, job: &QueuedJob, info: &InstallInfo) -> HubResult<()> {
+        if !installs::is_running(info) {
             return Ok(());
         }
         if !job.close_if_running {
             return Err(HubError::new("app-running"));
         }
         self.update_job(&job.id, |j| j.phase = "closing");
-        if !self.dry_run && !installs::close_app(exe).await {
+        if !self.dry_run && !installs::close_app(info).await {
             return Err(HubError::new("close-failed"));
         }
         Ok(())
@@ -665,7 +673,7 @@ impl Hub {
         self.progress.lock().unwrap_or_else(|p| p.into_inner()).remove(id);
         self.update_job(id, |j| j.verified = verified);
 
-        self.close_if_needed(job, &def.windows.exe).await?;
+        self.close_if_needed(job, &installs::detect(def)).await?;
         self.update_job(id, |j| j.phase = "installing");
         if self.dry_run {
             tokio::time::sleep(Duration::from_millis(2500)).await;
@@ -687,7 +695,7 @@ impl Hub {
         if !info.installed {
             return Err(HubError::new("not-installed"));
         }
-        self.close_if_needed(job, &def.windows.exe).await?;
+        self.close_if_needed(job, &info).await?;
         self.update_job(&job.id, |j| {
             j.phase = "uninstalling";
             j.version = info.version.clone();
@@ -734,8 +742,8 @@ impl Hub {
     }
 
     pub async fn stop(&self, id: &str) -> HubResult<()> {
-        let exe = self.lock().catalog.app(id).map(|d| d.windows.exe.clone()).ok_or_else(|| HubError::with("unknown-app", id))?;
-        let closed = installs::close_app(&exe).await;
+        let def = self.lock().catalog.app(id).cloned().ok_or_else(|| HubError::with("unknown-app", id))?;
+        let closed = installs::close_app(&installs::detect(&def)).await;
         self.poll_running();
         if closed {
             Ok(())

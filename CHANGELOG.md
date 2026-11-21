@@ -3,6 +3,25 @@
 Her sürümün notları burada `## X.Y.Z` başlığı altında durur; sürüm iş akışı (.github/workflows/release.yml) GitHub
 sürüm notunu bu bölümden alır.
 
+## 0.1.1
+
+<!-- tr -->
+- **Yalnız kurulu kopya kapatılır.** Bir uygulamanın açık olup olmadığı artık exe adıyla değil, kurulu olduğu klasörle anlaşılır. Aynı adla başka bir yerden çalışan bir kopya (ör. geliştirme klasöründen açılmış bir derleme) "Çalışıyor" sayılmaz; kurulum, güncelleme ve "Kapat" ona dokunmaz.
+- Paket kutusunda bir uygulama eksik, diğerinde güncelleme varken düğme "Kur ve güncelle" yazar.
+- Robz Hub'ın kendi sürüm notları seçili dilde gösterilir.
+- Yeni turuncu logo ve ana düğmeler.
+
+<!-- en -->
+<details><summary>English</summary>
+
+- **Only the installed copy is closed.** Whether an app is running is now decided by the folder it's installed in, not by its exe name. A copy with the same name running from elsewhere (for example a build in a development folder) doesn't count as "Running", and installing, updating or "Close" leave it alone.
+- When one app in a bundle is missing and the other has an update, the button reads "Install and update".
+- Robz Hub's own release notes show in the selected language.
+- New orange logo and primary buttons.
+
+</details>
+<!-- end -->
+
 ## 0.1.0
 
 <!-- tr -->
