@@ -177,6 +177,8 @@ impl Hub {
             .map_err(|e| HubError::with("unknown", e))?;
         let settings = Settings::load(&paths.settings);
         let (catalog, _source) = catalog::load_local(&paths.catalog_cache);
+        // Robz Hub'ın kendi güncellemesi için indirilen kurulum dosyası: Robz Hub yeniden açıldıysa işi bitmiştir.
+        let _ = std::fs::remove_dir_all(paths.downloads.join(HUB_ID));
         let (queue, rx) = mpsc::unbounded_channel();
 
         let hub = Arc::new(Self {

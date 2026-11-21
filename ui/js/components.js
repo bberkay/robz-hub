@@ -135,6 +135,8 @@ export function JobProgress({ def, job, compact = false }) {
   const { progress } = useStore();
   const live = progress[def.id];
   const downloading = job.phase === 'downloading';
+  // Sıradaki iş için çubuk boş durur; kapatma, kurma ve kaldırmada süresi belirsiz olduğu için hareket eder.
+  const working = job.phase === 'closing' || job.phase === 'installing' || job.phase === 'uninstalling';
   const received = downloading ? live?.received || 0 : 0;
   const total = live?.total || job.total || 0;
   const pct = percent(received, total);
@@ -155,13 +157,13 @@ export function JobProgress({ def, job, compact = false }) {
       </button>`}
     </div>
     <div
-      class=${`progress ${downloading ? '' : 'progress-indeterminate'}`}
+      class=${`progress ${working ? 'progress-indeterminate' : ''}`}
       role="progressbar"
       aria-valuemin="0"
       aria-valuemax="100"
-      aria-valuenow=${downloading ? pct : undefined}
+      aria-valuenow=${downloading ? pct : working ? undefined : 0}
     >
-      <span class="progress-fill" style=${{ width: downloading ? `${pct}%` : '' }}></span>
+      <span class="progress-fill" style=${{ width: downloading ? `${pct}%` : working ? '' : '0%' }}></span>
     </div>
     ${!compact &&
     job.verified &&
