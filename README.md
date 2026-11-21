@@ -99,7 +99,7 @@ Robz Hub'ı güncellemeye gerek kalmadan bütün kullanıcıların listesinde be
     <td valign="top"><b>Veri toplamaz</b><br>
       Hesap, reklam, kullanım istatistiği yok. Yalnız GitHub ile konuşur.</td>
     <td valign="top"><b>Türkçe ve İngilizce</b><br>
-      Windows diline göre açılır; kenar çubuğundaki <b>TR / EN</b> ile tek tıkla değişir.</td>
+      Windows diline göre açılır; kenar çubuğundaki bayraklı dil seçiminden değişir.</td>
   </tr>
 </table>
 
@@ -124,7 +124,7 @@ Robz Hub'ı güncellemeye gerek kalmadan bütün kullanıcıların listesinde be
   **İkisini de kur**, biri eksikse **Eksik olanı kur** (diğerinde güncelleme de varsa **Kur ve güncelle**), hepsi
   kuruluysa **İkisini de başlat**; güncelleme varsa yanında **Güncelle** çıkar. Düğmenin yanında toplam indirme boyutu,
   altında her uygulamanın sürümü ya da çalıştığı görünür.
-- **Uygulamalar listesi:** her satırda kurulu sürüm, güncelleme varsa `− eski` `+ yeni` sürüm geçişi ve o an anlamlı
+- **Uygulamalar listesi:** her satırda kurulu sürüm, GitHub'daki toplam indirme sayısı, güncelleme varsa `− eski` `+ yeni` sürüm geçişi ve o an anlamlı
   olan düğmeler (**Kur**, **Güncelle**, **Başlat**, **Kapat**). Satırın sonundaki **⋯** menüsünde: kurulum klasörünü
   aç, yeniden kur, web sitesi, GitHub deposu, sorun bildir ve **Kaldır**.
 - **Son sürümler:** bütün uygulamaların yeni sürümleri tek akışta; birine tıklayınca o sürümün notları açılır.
@@ -133,10 +133,11 @@ Robz Hub'ı güncellemeye gerek kalmadan bütün kullanıcıların listesinde be
 
 Kenar çubuğundan bir uygulamaya tıkla. **Genel bakış** sekmesinde ne yaptığı, neler gerektiği, ekran görüntüleri
 (tıklayınca büyür) ve sağda **Hakkında** bölümü var: kurulu sürüm, en son sürüm ve tarihi, indirme boyutu (yanındaki
-kalkan dosyanın doğrulanacağını gösterir), lisans ve **kurulum yeri** (tıklayınca klasör açılır).
+kalkan dosyanın doğrulanacağını gösterir), toplam indirme sayısı, lisans ve **kurulum yeri** (tıklayınca klasör açılır).
 
 **Sürüm notları** sekmesinde bütün sürümler GitHub'daki gibi zaman çizelgesinde durur; kurulu olan **Kurulu**,
-senden yeni olanlar **Yeni** etiketiyle işaretlidir. Uzun notlar **Tümünü göster** ile açılır.
+senden yeni olanlar **Yeni** etiketiyle işaretlidir; her sürümün yanında boyutu ve kaç kez indirildiği yazar. Uzun notlar
+**Tümünü göster** ile açılır.
 
 <table>
   <tr>
@@ -172,7 +173,7 @@ pencereyi yarım saatten uzun süre sonra öne getirdiğinde yapar.
 
 | Ayar | Ne yapar |
 |---|---|
-| **Dil** | Windows dili, Türkçe ya da English. Kenar çubuğundaki TR / EN de aynı ayardır. |
+| **Dil** | Windows dili, Türkçe ya da English. Kenar çubuğunun altındaki bayraklı dil seçimi de aynı ayardır. |
 | **Windows açılışında başlat** | Robz Hub bilgisayar açılınca tepside başlar ve yeni sürümleri bildirir. |
 | **Kapatınca tepside kal** | Pencereyi kapatınca Robz Hub kapanmaz, saatin yanındaki tepside çalışmayı sürdürür. |
 | **Yeni sürümleri kendiliğinden denetle** | Açılışta ve altı saatte bir GitHub'a bakar. |

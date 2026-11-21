@@ -37,6 +37,11 @@ export default {
   'status.new': 'New',
   'status.prerelease': 'Pre-release',
   'status.versionUnknown': 'Version unknown',
+  'stat.downloads': ({ n, raw }) => (raw === 1 ? '1 download' : `${n} downloads`),
+  'stat.downloadsTitle': 'Total downloads on GitHub',
+
+  'lang.tr': 'Türkçe',
+  'lang.en': 'English',
 
   'job.queued': 'Waiting in queue',
   'job.downloading': 'Downloading',
@@ -98,6 +103,7 @@ export default {
   'app.installedVersion': 'Installed version',
   'app.latestVersion': 'Latest version',
   'app.downloadSize': 'Download size',
+  'app.totalDownloads': 'Total downloads',
   'app.license': 'License',
   'app.location': 'Install location',
   'app.requirements': 'What you need',

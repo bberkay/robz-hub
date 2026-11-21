@@ -2,13 +2,14 @@
 import { html } from '../../vendor/preact-htm.js';
 import { Icon } from '../icons.js';
 import { pick, t } from '../i18n.js';
-import { bytes, dateLong, imageUrl } from '../format.js';
+import { bytes, count, dateLong, imageUrl } from '../format.js';
 import { navigate, update, useStore } from '../store.js';
 import * as actions from '../actions.js';
 import {
   AppActions,
   AppIcon,
   AppLink,
+  DownloadCount,
   JobError,
   JobProgress,
   Label,
@@ -70,6 +71,11 @@ function About({ def, app }) {
             html`<span class="fact-verified" title=${t('app.verifiedHint')}><${Icon} name="shield" size=${14} /></span>`}
           </dd>
         </div>`}
+      ${app.downloads > 0 &&
+      html`<div>
+        <dt>${t('app.totalDownloads')}</dt>
+        <dd title=${t('stat.downloadsTitle')}>${count(app.downloads)}</dd>
+      </div>`}
       ${def.license &&
       html`<div>
         <dt>${t('app.license')}</dt>
@@ -185,6 +191,7 @@ export function AppPage({ id, tab = 'overview' }) {
               : html`<${Label}>${t('status.notInstalled')}<//>
                   ${app.latest && html`<${VersionTag} version=${app.latest.version} />`}`}
           ${app.running && html`<${RunningBadge} />`}
+          <${DownloadCount} n=${app.downloads} />
         </div>
       </div>
       <${AppActions} def=${def} large />

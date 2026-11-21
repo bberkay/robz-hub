@@ -42,6 +42,18 @@ const ICONS = {
   info: '<path d="M8 2.25a5.75 5.75 0 1 0 0 11.5 5.75 5.75 0 0 0 0-11.5zM8 7.4v3.6M8 5.1h.01" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>',
   plus: '<path d="M8 3v10M3 8h10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>',
 };
+// Bayraklar SVG: Windows bayrak emojilerini "TR", "GB" harfleri olarak gösterir.
+const STAR = Array.from({ length: 10 }, (_, k) => {
+  const angle = Math.PI + (k * Math.PI) / 5;
+  const radius = k % 2 ? 0.96 : 2.5;
+  return `${(16.1 + radius * Math.cos(angle)).toFixed(2)},${(10 + radius * Math.sin(angle)).toFixed(2)}`;
+}).join(' ');
+const FLAGS = {
+  tr: `<svg class="flag" width="21" height="14" viewBox="0 0 30 20" aria-hidden="true"><rect width="30" height="20" fill="#E30A17"/><circle cx="10.5" cy="10" r="5" fill="#fff"/><circle cx="11.75" cy="10" r="4" fill="#E30A17"/><polygon points="${STAR}" fill="#fff"/></svg>`,
+  en: '<svg class="flag" width="21" height="14" viewBox="0 0 45 30" aria-hidden="true"><rect width="45" height="30" fill="#012169"/><path d="M0,0 L45,30 M45,0 L0,30" stroke="#fff" stroke-width="6"/><path d="M0,0 L45,30 M45,0 L0,30" stroke="#C8102E" stroke-width="2.2"/><path d="M22.5,0 V30 M0,15 H45" stroke="#fff" stroke-width="9"/><path d="M22.5,0 V30 M0,15 H45" stroke="#C8102E" stroke-width="5.4"/></svg>',
+};
+const LANGS = { tr: 'Türkçe', en: 'English' };
+
 const icon = (name, size = 16) =>
   `<svg class="i" width="${size}" height="${size}" viewBox="0 0 16 16" aria-hidden="true">${ICONS[name]}</svg>`;
 
@@ -261,10 +273,18 @@ function page(t) {
         <a href="#faq">${esc(t.nav.faq)}</a>
         <a href="${REPO_URL}">${icon('github')}<span>${esc(t.nav.github)}</span></a>
       </nav>
-      <div class="lang" role="navigation" aria-label="Language">
-        <a href="${lang === 'tr' ? './' : '../'}" ${lang === 'tr' ? 'aria-current="page"' : ''} hreflang="tr" lang="tr">TR</a>
-        <a href="${lang === 'tr' ? 'en/' : './'}" ${lang === 'en' ? 'aria-current="page"' : ''} hreflang="en" lang="en">EN</a>
-      </div>
+      <details class="lang" data-lang-menu>
+        <summary aria-label="${lang === 'tr' ? 'Dil' : 'Language'}: ${LANGS[lang]}">${FLAGS[lang]}<span>${LANGS[lang]}</span><svg class="i lang-chevron" width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 6 8 10.5 12.5 6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></summary>
+        <ul>
+          ${['tr', 'en']
+            .map((code) => {
+              const href = code === lang ? (lang === 'tr' ? './' : './') : code === 'en' ? 'en/' : '../';
+              const current = code === lang ? ' aria-current="page"' : '';
+              return `<li><a href="${href}" hreflang="${code}" lang="${code}"${current}>${FLAGS[code]}<span>${LANGS[code]}</span></a></li>`;
+            })
+            .join('')}
+        </ul>
+      </details>
     </div>
   </header>
 

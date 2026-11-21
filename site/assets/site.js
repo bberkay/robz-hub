@@ -22,6 +22,20 @@
     diff.classList.add('play');
   }
 
+  // ---- dil menüsü: dışarı tıklayınca ya da Esc ile kapanır ----
+  const langMenu = document.querySelector('[data-lang-menu]');
+  if (langMenu) {
+    document.addEventListener('click', (event) => {
+      if (langMenu.open && !langMenu.contains(event.target)) langMenu.open = false;
+    });
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && langMenu.open) {
+        langMenu.open = false;
+        langMenu.querySelector('summary').focus();
+      }
+    });
+  }
+
   // ---- GitHub ----
   const cacheKey = 'robzhub:gh:v1';
   async function api(path) {

@@ -293,35 +293,77 @@ h3 {
   background: var(--neutral);
   text-decoration: none;
 }
-/* Dil seçimi GitHub sekmesi gibi: seçili olanın altında logodaki turuncu çizgi */
+/* Dil seçimi: bayraklı açılır kutu (uygulamadakiyle aynı) */
+.flag {
+  display: block;
+  flex: none;
+  border-radius: 2px;
+  box-shadow: 0 0 0 1px rgba(240, 246, 252, 0.15);
+}
 .lang {
-  display: flex;
-  gap: 2px;
-}
-.lang a {
   position: relative;
-  padding: 6px 8px;
-  border-radius: var(--radius);
-  color: var(--fg-muted);
-  font-size: 13px;
-  font-weight: 650;
 }
-.lang a:hover {
-  background: var(--neutral);
+.lang summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 34px;
+  padding: 0 8px 0 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: #212830;
+  font-size: 14px;
+  font-weight: 550;
+  list-style: none;
+  cursor: pointer;
+  user-select: none;
+}
+.lang summary::-webkit-details-marker {
+  display: none;
+}
+.lang summary:hover {
+  background: #262c36;
+}
+.lang-chevron {
+  color: var(--fg-muted);
+}
+.lang[open] .lang-chevron {
+  transform: rotate(180deg);
+}
+.lang ul {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 170px;
+  padding: 6px;
+  border-radius: var(--radius-lg);
+  background: var(--muted-bg);
+  box-shadow: 0 0 0 1px var(--border), 0 16px 32px rgba(1, 4, 9, 0.85);
+}
+.lang ul a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 36px;
+  padding: 0 10px;
+  border-radius: var(--radius);
   color: var(--fg);
+  font-size: 14px;
+}
+.lang ul a:hover {
+  background: var(--neutral);
   text-decoration: none;
 }
-.lang a[aria-current='page'] {
-  color: var(--fg);
+.lang ul a[aria-current='page'] {
+  font-weight: 650;
 }
-.lang a[aria-current='page']::after {
+.lang ul a[aria-current='page']::after {
   content: '';
-  position: absolute;
-  right: 6px;
-  bottom: -14px;
-  left: 6px;
-  height: 2px;
-  border-radius: 2px;
+  width: 6px;
+  height: 6px;
+  margin-left: auto;
+  border-radius: 50%;
   background: var(--orange);
 }
 

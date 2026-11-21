@@ -5,7 +5,7 @@ import { t } from '../i18n.js';
 import { bytes } from '../format.js';
 import { toast, useStore } from '../store.js';
 import * as actions from '../actions.js';
-import { Segmented, Toggle } from '../components.js';
+import { LanguageSelect, Toggle } from '../components.js';
 
 const set = (key, value) => actions.run('setSetting', key, value);
 
@@ -46,14 +46,14 @@ export function Settings() {
       <h2 class="section-title">${t('settings.language')}</h2>
       <div class="box">
         <${Row} title=${t('settings.language')} desc=${t('settings.language.desc')}>
-          <${Segmented}
+          <${LanguageSelect}
             label=${t('settings.language')}
             value=${settings.language}
             onChange=${(value) => set('language', value)}
             options=${[
-              { value: 'auto', label: t('settings.language.auto') },
-              { value: 'tr', label: 'Türkçe' },
-              { value: 'en', label: 'English' },
+              { value: 'auto', label: t('settings.language.auto'), flag: 'auto' },
+              { value: 'tr', label: t('lang.tr'), flag: 'tr' },
+              { value: 'en', label: t('lang.en'), flag: 'en' },
             ]}
           />
         <//>

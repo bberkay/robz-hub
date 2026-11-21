@@ -37,6 +37,11 @@ export default {
   'status.new': 'Yeni',
   'status.prerelease': 'Ön sürüm',
   'status.versionUnknown': 'Sürümü bilinmiyor',
+  'stat.downloads': ({ n }) => `${n} indirme`,
+  'stat.downloadsTitle': "GitHub'daki toplam indirme sayısı",
+
+  'lang.tr': 'Türkçe',
+  'lang.en': 'English',
 
   'job.queued': 'Sırada bekliyor',
   'job.downloading': 'İndiriliyor',
@@ -98,6 +103,7 @@ export default {
   'app.installedVersion': 'Kurulu sürüm',
   'app.latestVersion': 'En son sürüm',
   'app.downloadSize': 'İndirme boyutu',
+  'app.totalDownloads': 'Toplam indirme',
   'app.license': 'Lisans',
   'app.location': 'Kurulum yeri',
   'app.requirements': 'Gerekenler',

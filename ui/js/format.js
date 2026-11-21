@@ -16,6 +16,11 @@ export function bytes(n) {
   return `${number(n / 1024, 0)} KB`;
 }
 
+// 12345 -> "12.345" (Türkçe) / "12,345" (İngilizce)
+export function count(n) {
+  return number(n || 0, 0);
+}
+
 export function speed(bytesPerSecond) {
   if (!bytesPerSecond) return '';
   return `${bytes(bytesPerSecond)}${t('unit.perSecond')}`;

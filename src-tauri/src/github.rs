@@ -21,6 +21,9 @@ pub struct Asset {
     pub size: u64,
     pub url: String,
     pub sha256: Option<String>,
+    /// GitHub'ın saydığı indirme sayısı (download_count).
+    #[serde(default)]
+    pub downloads: u64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -80,7 +83,8 @@ pub fn now_ms() -> u64 {
 }
 
 fn cache_file(cache_dir: &Path, repo: &str) -> PathBuf {
-    cache_dir.join(format!("{}.json", repo.replace('/', "__")))
+    // ".v2": indirme sayılarıyla birlikte saklanan biçim. Eski önbellek okunmaz; ilk denetimde baştan alınır.
+    cache_dir.join(format!("{}.v2.json", repo.replace('/', "__")))
 }
 
 fn read_cache(file: &Path) -> Option<CacheFile> {
@@ -115,6 +119,7 @@ pub fn slim_release(raw: &Value) -> Option<Release> {
                         size: a["size"].as_u64().unwrap_or(0),
                         url: a["browser_download_url"].as_str()?.to_string(),
                         sha256,
+                        downloads: a["download_count"].as_u64().unwrap_or(0),
                     })
                 })
                 .collect()
@@ -217,7 +222,8 @@ mod tests {
             "body": "notes",
             "assets": assets.iter().map(|n| json!({
                 "name": n, "size": 10, "browser_download_url": format!("https://github.com/o/r/releases/download/{tag}/{n}"),
-                "digest": "sha256:066107C57DEC73B39F344388A439A5A487DC7BFC471490BE493840656747ABAD"
+                "digest": "sha256:066107C57DEC73B39F344388A439A5A487DC7BFC471490BE493840656747ABAD",
+                "download_count": 21
             })).collect::<Vec<_>>()
         }))
         .unwrap()
@@ -228,6 +234,10 @@ mod tests {
         let r = release("v1.6.0", false, &["RobzVision-Setup-1.6.0-x64.exe"]);
         assert_eq!(r.version, "1.6.0");
         assert_eq!(r.name, "v1.6.0");
+        assert_eq!(r.assets[0].downloads, 21);
+        // Eski önbellekte indirme sayısı yoktur: 0 sayılır.
+        let old: Asset = serde_json::from_str(r#"{"name":"a.exe","size":1,"url":"u","sha256":null}"#).unwrap();
+        assert_eq!(old.downloads, 0);
         assert_eq!(
             r.assets[0].sha256.as_deref(),
             Some("066107c57dec73b39f344388a439a5a487dc7bfc471490be493840656747abad")

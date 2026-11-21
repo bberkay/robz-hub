@@ -6,7 +6,7 @@ import { bytes, relative } from '../format.js';
 import { excerpt, selectNotes } from '../notes.js';
 import { navigate, useStore } from '../store.js';
 import * as actions from '../actions.js';
-import { AppActions, AppIcon, AppLink, JobError, Label, RunningBadge, Spinner, VersionState } from '../components.js';
+import { AppActions, AppIcon, AppLink, DownloadCount, JobError, RunningBadge, Spinner, VersionState } from '../components.js';
 
 // Paketin anlattığı şeyin küçük bir çizimi: 60 FPS sayacı ve İngilizce altyazının üstünde Türkçesi.
 // Cümleler Robz Vision'ın kendi örnek cümleleridir; oyundan alıntı değildir.
@@ -109,6 +109,7 @@ function AppRow({ def }) {
           <${AppLink} def=${def} />
           <${VersionState} app=${app} />
           ${app.running && html`<${RunningBadge} />`}
+          <${DownloadCount} n=${app.downloads} />
         </div>
         <p class="muted">${pick(def.tagline)}</p>
       </div>

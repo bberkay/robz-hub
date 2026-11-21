@@ -99,7 +99,7 @@ for every user without updating Robz Hub.
     <td valign="top"><b>Collects no data</b><br>
       No account, ads or usage statistics. It only talks to GitHub.</td>
     <td valign="top"><b>Turkish and English</b><br>
-      Follows your Windows language; switch with <b>TR / EN</b> in the sidebar.</td>
+      Follows your Windows language; switch with the flag language picker in the sidebar.</td>
   </tr>
 </table>
 
@@ -124,7 +124,7 @@ for every user without updating Robz Hub.
   is installed, **Install the missing one** when one is missing (**Install and update** if the other also has an
   update), **Launch both** when all are installed, with **Update** next to it when there's a new version. The total
   download size is shown next to it, and each app's version or running state below.
-- **Apps list:** each row shows the installed version, the `− old` `+ new` change when an update exists, and the
+- **Apps list:** each row shows the installed version, the total download count on GitHub, the `− old` `+ new` change when an update exists, and the
   buttons that make sense right now (**Install**, **Update**, **Launch**, **Close**). The **⋯** menu at the end has:
   open install folder, reinstall, website, GitHub repository, report an issue and **Uninstall**.
 - **Recent releases:** new versions of every app in one feed; click one to open its notes.
@@ -133,10 +133,10 @@ for every user without updating Robz Hub.
 
 Click an app in the sidebar. **Overview** shows what it does, what it needs, screenshots (click to enlarge) and an
 **About** section: installed version, latest version and its date, download size (the shield means the file will be
-verified), license and **install location** (click to open the folder).
+verified), total downloads, license and **install location** (click to open the folder).
 
 **Release notes** lists every release on a timeline like GitHub's; yours is marked **Installed** and newer ones
-**New**. Long notes expand with **Show all**.
+**New**, and each release shows its size and how many times it was downloaded. Long notes expand with **Show all**.
 
 <table>
   <tr>
@@ -172,7 +172,7 @@ when you bring the window back after more than half an hour.
 
 | Setting | What it does |
 |---|---|
-| **Language** | Windows language, Türkçe or English. TR / EN in the sidebar is the same setting. |
+| **Language** | Windows language, Türkçe or English. The flag language picker at the bottom of the sidebar is the same setting. |
 | **Start with Windows** | Robz Hub starts in the tray when the PC starts and tells you about new versions. |
 | **Keep in the tray when closed** | Closing the window keeps Robz Hub running in the tray next to the clock. |
 | **Check for new versions automatically** | Asks GitHub at startup and every six hours. |

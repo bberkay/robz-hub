@@ -637,30 +637,94 @@
   cursor: not-allowed;
 }
 
-.segmented {
-  display: inline-flex;
-  padding: 2px;
-  border-radius: var(--radius);
-  background: var(--bg-neutral-muted);
+/* Dil seçimi: bayraklı açılır kutu */
+.flag {
+  display: block;
+  flex: none;
+  border-radius: 2px;
+  box-shadow: 0 0 0 1px rgba(240, 246, 252, 0.15);
 }
-.segmented-item {
-  height: 26px;
-  padding: 0 10px;
-  border: 1px solid transparent;
-  border-radius: 5px;
-  background: transparent;
+.flag-auto {
+  display: grid;
+  place-items: center;
+  box-shadow: none;
   color: var(--fg-muted);
-  font-size: 12px;
+}
+.lang-select {
+  position: relative;
+}
+.lang-select-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 30px;
+  padding: 0 8px 0 10px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius);
+  background: var(--btn-bg);
+  font-size: 13px;
   font-weight: 500;
   cursor: pointer;
 }
-.segmented-item:hover {
-  color: var(--fg-default);
+.lang-select-button:hover {
+  background: var(--btn-hover);
 }
-.segmented-item[aria-checked='true'] {
-  border-color: var(--border-default);
-  background: var(--bg-default);
-  color: var(--fg-default);
+.lang-select-chevron {
+  color: var(--fg-muted);
+}
+.lang-select-button[aria-expanded='true'] .lang-select-chevron {
+  transform: rotate(180deg);
+}
+.lang-select-list {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 4px);
+  right: 0;
+  width: max-content;
+  min-width: 180px;
+  padding: 6px;
+  border-radius: var(--radius-lg);
+  background: var(--bg-overlay);
+  box-shadow: var(--shadow-overlay);
+}
+.lang-select-option span {
+  white-space: nowrap;
+}
+.lang-select-up .lang-select-list {
+  top: auto;
+  right: auto;
+  bottom: calc(100% + 4px);
+  left: 0;
+}
+.lang-select-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 34px;
+  padding: 0 10px;
+  border-radius: var(--radius);
+  font-size: 14px;
+  cursor: pointer;
+}
+.lang-select-option.is-active {
+  background: var(--bg-neutral-muted);
+}
+.lang-select-option[aria-selected='true'] {
+  font-weight: 600;
+}
+.lang-select-check {
+  margin-left: auto;
+  color: var(--brand-fg);
+}
+
+/* GitHub'daki indirme sayısı */
+.dl-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--fg-muted);
+  font-size: 12px;
+  white-space: nowrap;
 }
 
 /* ==== iş ilerlemesi ============================================================================================== */

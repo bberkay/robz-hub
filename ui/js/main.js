@@ -6,7 +6,7 @@ import { lang, pick, t } from './i18n.js';
 import { imageUrl, relative } from './format.js';
 import { closeDialog, dismissToast, navigate, store, toast, update, useStore } from './store.js';
 import * as actions from './actions.js';
-import { AppIcon, Segmented, Spinner } from './components.js';
+import { AppIcon, LanguageSelect, Spinner } from './components.js';
 import { Home } from './views/home.js';
 import { AppPage } from './views/app-page.js';
 import { Updates } from './views/updates.js';
@@ -75,13 +75,14 @@ function Sidebar() {
         />
       </nav>
       <div class="sidebar-meta">
-        <${Segmented}
+        <${LanguageSelect}
+          up
           label=${t('settings.language')}
           value=${lang()}
           onChange=${(value) => actions.run('setSetting', 'language', value)}
           options=${[
-            { value: 'tr', label: 'TR' },
-            { value: 'en', label: 'EN' },
+            { value: 'tr', label: t('lang.tr'), flag: 'tr' },
+            { value: 'en', label: t('lang.en'), flag: 'en' },
           ]}
         />
         <div class="sidebar-links">

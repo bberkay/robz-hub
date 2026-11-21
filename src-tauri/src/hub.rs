@@ -46,6 +46,8 @@ pub struct AppState {
     pub latest: Option<Latest>,
     pub update_available: bool,
     pub fetch_status: Option<&'static str>,
+    /// Bütün sürümlerin bütün dosyalarının toplam indirme sayısı (GitHub'daki "toplam indirme" rozetiyle aynı hesap).
+    pub downloads: u64,
 }
 
 #[derive(Debug, Clone, Default, Serialize)]
@@ -155,6 +157,7 @@ fn derive(def: &AppDef, app: &mut AppState) {
     });
     app.update_available = app.install.installed
         && matches!((&app.latest, &app.install.version), (Some(l), Some(v)) if version::compare(&l.version, v).is_gt());
+    app.downloads = app.releases.iter().flat_map(|r| &r.assets).map(|a| a.downloads).sum();
 }
 
 /// Kurulu kopyanın exe yolundan çalışan bir süreç var mı (running_paths sonucuna göre)?
@@ -278,6 +281,7 @@ impl Hub {
                 latest: None,
                 update_available: false,
                 fetch_status: None,
+                downloads: 0,
             });
             derive(def, &mut state);
             apps.insert(def.id.clone(), state);

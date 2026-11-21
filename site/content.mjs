@@ -77,9 +77,9 @@ export default {
       ['Küçük ve hızlı', "Rust ve Windows'un kendi WebView2'siyle (Tauri) yazıldı. Kurulum dosyası yaklaşık 2 MB, açılışı anlık."],
       ['İndirilen her dosya doğrulanır', "Kurulum dosyası yalnız uygulamanın kendi GitHub sürümünden iner; SHA-256 özeti GitHub'ınkiyle tutmazsa silinir ve çalıştırılmaz."],
       ['Veri toplamaz', 'Hesap, reklam ya da kullanım istatistiği yok. Robz Hub yalnız GitHub ile konuşur ve kendini "RobzHub/sürüm" diye tanıtır.'],
-      ['Sürüm notları içinde', 'Her uygulamanın bütün sürümleri tarihleriyle; kurulu sürümünden sonra gelenler "Yeni" etiketiyle işaretli.'],
+      ['Sürüm notları ve indirme sayıları', 'Her uygulamanın bütün sürümleri tarihleri ve indirme sayılarıyla; kurulu sürümünden sonra gelenler "Yeni" etiketiyle işaretli.'],
       ['Arka planda bekler', 'İstersen tepside çalışır, Windows açılışında başlar ve yeni sürümü bildirir. Hepsi Ayarlar\'dan açılıp kapanır.'],
-      ['Türkçe ve İngilizce', 'Arayüz Windows diline göre açılır; kenar çubuğundaki TR / EN ile tek tıkla değişir.'],
+      ['Türkçe ve İngilizce', 'Arayüz Windows diline göre açılır; kenar çubuğundaki bayraklı dil seçiminden değişir.'],
     ],
 
     screensTitle: 'Ekranlar',
@@ -214,9 +214,9 @@ export default {
       ['Small and fast', 'Written in Rust on Windows\' own WebView2 (Tauri). The installer is about 2 MB and it opens instantly.'],
       ['Every download is verified', "Installers come only from each app's own GitHub releases; if the SHA-256 digest doesn't match GitHub's, the file is deleted and never run."],
       ['Collects no data', 'No account, ads or usage statistics. Robz Hub only talks to GitHub and identifies itself as "RobzHub/version".'],
-      ['Release notes built in', "Every release of every app with its date; the ones newer than what you have are marked \"New\"."],
+      ['Release notes and download counts', "Every release of every app with its date and download count; the ones newer than what you have are marked \"New\"."],
       ['Waits in the background', 'Optionally it runs in the tray, starts with Windows and tells you about new versions. All of it is in Settings.'],
-      ['Turkish and English', 'The interface follows your Windows language; switch with TR / EN in the sidebar.'],
+      ['Turkish and English', 'The interface follows your Windows language; switch with the flag language picker in the sidebar.'],
     ],
 
     screensTitle: 'Screens',
