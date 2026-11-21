@@ -3,6 +3,21 @@
 Her sürümün notları burada `## X.Y.Z` başlığı altında durur; sürüm iş akışı (.github/workflows/release.yml) GitHub
 sürüm notunu bu bölümden alır.
 
+## 0.1.3
+
+<!-- tr -->
+- **İndirme sayıları.** Her uygulamanın GitHub'daki toplam indirme sayısı uygulama listesinde ve uygulama sayfasında, her sürümün indirme sayısı sürüm notlarında görünür.
+- **Bayraklı dil seçimi.** Kenar çubuğundaki TR / EN düğmelerinin yerine Türk ve İngiliz bayraklı bir seçim kutusu geldi; seçtiğin an dil değişir. Ayarlar'da "Windows dili" seçeneği de bu kutuda.
+
+<!-- en -->
+<details><summary>English</summary>
+
+- **Download counts.** Each app's total downloads on GitHub show in the app list and on the app page, and each release's download count shows in the release notes.
+- **Flag language picker.** The TR / EN buttons in the sidebar are replaced by a picker with the Turkish and British flags; the language changes as soon as you choose. In Settings, the "Windows language" option is in the same picker.
+
+</details>
+<!-- end -->
+
 ## 0.1.2
 
 <!-- tr -->
