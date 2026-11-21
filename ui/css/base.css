@@ -1,0 +1,209 @@
+/* Renkler GitHub'ın koyu temasıdır (Primer "dark default"). Yazı tipi GitHub'ın açık kaynak yüzü Mona Sans;
+   sürüm numaraları, yollar ve özetler eş aralıklı yazılır (Windows'un Cascadia Mono'su). */
+
+@font-face {
+  font-family: 'Mona Sans';
+  font-style: normal;
+  font-weight: 200 900;
+  font-display: block;
+  src: url('../vendor/fonts/mona-sans-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Mona Sans';
+  font-style: normal;
+  font-weight: 200 900;
+  font-display: block;
+  src: url('../vendor/fonts/mona-sans-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF,
+    U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+:root {
+  color-scheme: dark;
+
+  --bg-default: #0d1117;
+  --bg-muted: #151b23;
+  --bg-inset: #010409;
+  --bg-overlay: #151b23;
+  --bg-neutral-muted: rgba(101, 108, 118, 0.2);
+  --bg-neutral-hover: rgba(101, 108, 118, 0.3);
+
+  --border-default: #3d444d;
+  --border-muted: rgba(61, 68, 77, 0.7);
+
+  --fg-default: #f0f6fc;
+  --fg-muted: #9198a1;
+  --fg-subtle: #6e7681;
+
+  --accent-fg: #4493f8;
+  --accent-emphasis: #1f6feb;
+  --accent-muted: rgba(56, 139, 253, 0.15);
+
+  --success-fg: #3fb950;
+  --success-emphasis: #238636;
+  --success-hover: #29903b;
+  --success-muted: rgba(46, 160, 67, 0.15);
+
+  --attention-fg: #d29922;
+  --attention-emphasis: #9e6a03;
+  --attention-muted: rgba(187, 128, 9, 0.15);
+
+  --danger-fg: #f85149;
+  --danger-emphasis: #da3633;
+  --danger-muted: rgba(248, 81, 73, 0.15);
+
+  --done-fg: #ab7df8;
+
+  /* Robz Hub'ın kendi rengi: logodaki turuncu. Ana düğmeler ve seçili sekme çizgisi bu renktedir; yeşil yalnız
+     anlam taşıdığı yerlerde (çalışıyor, güncel, doğrulandı, diff'teki eklenen satır) kalır. */
+  --brand-fg: #fb8f44;
+  --brand-emphasis: #bd561d;
+  --brand-hover: #c9611f;
+  --brand-active: #d06a26;
+  --tab-underline: var(--brand-fg);
+
+  --diff-del-bg: rgba(248, 81, 73, 0.15);
+  --diff-del-fg: #ffa198;
+  --diff-add-bg: rgba(46, 160, 67, 0.2);
+  --diff-add-fg: #7ee787;
+
+  --btn-bg: #212830;
+  --btn-hover: #262c36;
+  --btn-active: #2a313c;
+
+  --radius: 6px;
+  --radius-lg: 12px;
+  --shadow-overlay: 0 0 0 1px var(--border-default), 0 16px 32px rgba(1, 4, 9, 0.85);
+
+  --font-sans: 'Mona Sans', 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'Cascadia Mono', 'Cascadia Code', Consolas, ui-monospace, monospace;
+
+  --sidebar-width: 264px;
+  --titlebar-height: 40px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  overflow: hidden;
+  background: var(--bg-default);
+  color: var(--fg-default);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+  cursor: default;
+}
+
+h1,
+h2,
+h3,
+h4,
+p,
+ul,
+ol,
+dl,
+dd,
+figure {
+  margin: 0;
+}
+
+ul,
+ol {
+  padding: 0;
+  list-style: none;
+}
+
+img {
+  display: block;
+  max-width: 100%;
+}
+
+a {
+  color: var(--accent-fg);
+  text-decoration: none;
+  cursor: pointer;
+}
+a:hover {
+  text-decoration: underline;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+}
+
+:focus {
+  outline: none;
+}
+:focus-visible {
+  outline: 2px solid var(--accent-emphasis);
+  outline-offset: 2px;
+}
+
+::selection {
+  background: rgba(31, 111, 235, 0.5);
+}
+
+/* Kaydırma çubuğu: ince, GitHub'daki gibi sade */
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(101, 108, 118, 0.35);
+  border: 3px solid transparent;
+  border-radius: 8px;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(145, 152, 161, 0.5);
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+}
+.muted {
+  color: var(--fg-muted);
+}
+.selectable {
+  user-select: text;
+  cursor: text;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

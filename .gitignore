@@ -1,0 +1,10 @@
+node_modules/
+ui/vendor/
+src-tauri/target/
+src-tauri/gen/
+*.log
+.DS_Store
+Thumbs.db
+/RobzHub-Setup-*.exe
+site/dist/
+.claude/

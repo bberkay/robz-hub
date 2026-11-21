@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Robz Hub simgesi: GitHub koyu zemininde beyaz R, turuncu H ve turuncu alt çizgi. -->
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1b222c"/>
+      <stop offset="1" stop-color="#0d1117"/>
+    </linearGradient>
+  </defs>
+  <rect x="14" y="14" width="484" height="484" rx="108" fill="url(#tile)"/>
+  <rect x="15.5" y="15.5" width="481" height="481" rx="106.5" fill="none" stroke="#3d444d" stroke-width="3"/>
+  <g transform="translate(22 0) skewX(-9)" fill="none" stroke-width="46" stroke-linecap="round" stroke-linejoin="round">
+    <!-- R -->
+    <path d="M132 348V160h58a50 50 0 0 1 0 100h-58m52 0 54 88" stroke="#f0f6fc"/>
+    <!-- H -->
+    <path d="M298 160v188M394 160v188M298 254h96" stroke="#fb8f44"/>
+  </g>
+  <rect x="112" y="396" width="288" height="18" rx="9" fill="#fb8f44"/>
+</svg>

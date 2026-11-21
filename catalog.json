@@ -1,0 +1,204 @@
+{
+  "schema": 1,
+  "revision": 1,
+  "hub": {
+    "repo": "kutsalkiremitci/robz-hub",
+    "asset": "^RobzHub-Setup-[0-9.]+\\.exe$"
+  },
+  "links": {
+    "github": "https://github.com/kutsalkiremitci/robz-hub",
+    "discord": "https://discord.gg/UyyEn7SHm4",
+    "kick": "https://kick.com/robzsogood"
+  },
+  "bundles": [
+    {
+      "id": "gta6",
+      "title": {
+        "tr": "GTA VI'yı 60 FPS ve Türkçe altyazıyla oyna",
+        "en": "Play GTA VI at 60 FPS with Turkish subtitles"
+      },
+      "description": {
+        "tr": "Robz Play, PS5'teki 30 FPS oyunu bilgisayarında 60 FPS akıcılığında gösterir. Robz Vision, ekrandaki İngilizce altyazıyı anında Türkçeye çevirir. İkisi birlikte çalışır.",
+        "en": "Robz Play shows your PS5's 30 FPS game on your PC with 60 FPS smoothness. Robz Vision translates the on-screen English subtitles to Turkish as you play. They work together."
+      },
+      "apps": ["robz-play", "robz-vision"]
+    }
+  ],
+  "announcements": [],
+  "apps": [
+    {
+      "id": "robz-play",
+      "name": "Robz Play",
+      "repo": "kutsalkiremitci/robz-play",
+      "license": "AGPL-3.0",
+      "role": { "tr": "60 FPS", "en": "60 FPS" },
+      "tagline": {
+        "tr": "PS5'te 30 FPS çalışan oyunu bilgisayarında 60 FPS akıcılığında oynatır.",
+        "en": "Plays 30 FPS PS5 games on your PC with 60 FPS smoothness."
+      },
+      "description": {
+        "tr": "Robz Play, GTA VI için tasarlandı. PS5'ine ev ağı üzerinden Remote Play ile 1080p bağlanır; aradaki kareleri bilgisayarının ekran kartı üretir. Capture card gerekmez: PS5, bilgisayar ve ikisinin bağlı olduğu ağ yeterli. Aynı yöntem 30 FPS'e kilitli bütün PS5 ve PS4 oyunlarında işe yarar.",
+        "en": "Robz Play was built for GTA VI. It connects to your PS5 over your home network with Remote Play at 1080p, and your PC's graphics card generates the in-between frames. No capture card needed: a PS5, a PC and the network they share are enough. The same method works for every PS5 and PS4 game locked to 30 FPS."
+      },
+      "highlights": [
+        {
+          "title": { "tr": "30 FPS'ten 60 FPS'e", "en": "From 30 FPS to 60 FPS" },
+          "text": {
+            "tr": "Aradaki kareleri ekran kartın üretir. Tek tıkla açılır ve kapanır; 120 FPS seçeneği deneyseldir.",
+            "en": "Your graphics card generates the in-between frames. One click turns it on or off; the 120 FPS option is experimental."
+          }
+        },
+        {
+          "title": { "tr": "1080p Remote Play", "en": "1080p Remote Play" },
+          "text": {
+            "tr": "Konsolunu bilgisayarından oynarsın; görüntü, konsolun gönderdiği gibidir.",
+            "en": "Play your console from your PC; the picture is what the console sends."
+          }
+        },
+        {
+          "title": { "tr": "Capture card yok", "en": "No capture card" },
+          "text": {
+            "tr": "Ek donanım gerekmez. PS5, bilgisayar ve ev ağı yeterli.",
+            "en": "No extra hardware. A PS5, a PC and your home network are enough."
+          }
+        },
+        {
+          "title": { "tr": "Türkçe ve İngilizce", "en": "Turkish and English" },
+          "text": {
+            "tr": "Arayüz Türkçe açılır, İngilizcesi de var.",
+            "en": "The interface opens in Turkish and is also available in English."
+          }
+        }
+      ],
+      "requirements": [
+        { "tr": "PlayStation 5 (PS4 de olur), Uzaktan Oynama açık", "en": "PlayStation 5 (PS4 works too) with Remote Play enabled" },
+        { "tr": "Windows 10 ya da 11, 64 bit", "en": "Windows 10 or 11, 64-bit" },
+        { "tr": "Vulkan destekli ayrı ekran kartı (NVIDIA GTX/RTX, AMD Radeon RX, Intel Arc)", "en": "A discrete graphics card with Vulkan (NVIDIA GTX/RTX, AMD Radeon RX, Intel Arc)" },
+        { "tr": "PS5 ile bilgisayar aynı ev ağında", "en": "PS5 and PC on the same home network" },
+        { "tr": "PlayStation hesabı", "en": "A PlayStation account" }
+      ],
+      "icon": "assets/apps/robz-play/icon.svg",
+      "screenshots": [
+        {
+          "url": "https://raw.githubusercontent.com/kutsalkiremitci/robz-play/robzplay/assets/robzplay/gta-vi-60fps.jpg",
+          "caption": { "tr": "Robz Play ile GTA VI: sol üstteki sayaç 60 FPS gösteriyor.", "en": "GTA VI in Robz Play: the counter in the top left shows 60 FPS." }
+        },
+        {
+          "url": "https://raw.githubusercontent.com/kutsalkiremitci/robz-play/robzplay/assets/robzplay/kurulum/ana-ekran.webp",
+          "caption": { "tr": "Ana ekran: üstte konsol kartı, ortada Görüntü modu.", "en": "Home screen: the console card on top, Display mode in the middle." }
+        },
+        {
+          "url": "https://raw.githubusercontent.com/kutsalkiremitci/robz-play/robzplay/assets/robzplay/kurulum/goruntu-modu.webp",
+          "caption": { "tr": "Görüntü modu: kare üretimi tek tıkla açılır.", "en": "Display mode: frame generation is one click away." }
+        },
+        {
+          "url": "https://raw.githubusercontent.com/kutsalkiremitci/robz-play/robzplay/assets/robzplay/kurulum/ayarlar-genel.webp",
+          "caption": { "tr": "Ayarlar: hareket ayrıntısı, keskinleştirme ve FPS sayacı.", "en": "Settings: motion detail, sharpening and the FPS counter." }
+        }
+      ],
+      "links": {
+        "website": "https://kutsalkiremitci.github.io/robz-play/",
+        "guide": "https://github.com/kutsalkiremitci/robz-play#adım-adım-kurulum"
+      },
+      "windows": {
+        "installer": "nsis",
+        "asset": "^RobzPlay-Setup\\.exe$",
+        "uninstallKey": "RobzPlay",
+        "defaultDir": "%LOCALAPPDATA%\\Programs\\Robz Play",
+        "exe": "RobzPlay.exe"
+      }
+    },
+    {
+      "id": "robz-vision",
+      "name": "Robz Vision",
+      "repo": "kutsalkiremitci/robz-vision",
+      "license": "MIT",
+      "role": { "tr": "Türkçe altyazı", "en": "Turkish subtitles" },
+      "tagline": {
+        "tr": "Oyundaki İngilizce altyazıyı ekrandan okur, anında Türkçeye çevirir.",
+        "en": "Reads a game's English subtitles off the screen and translates them to Turkish as you play."
+      },
+      "description": {
+        "tr": "Bilgisayarda ya da PS Remote Play ile oynadığın oyunlarda çeviri oyunun üstünde belirir; Kick ve OBS yayınında izleyicilerin de görür. Ekran görüntüsü, OCR ve çeviri bilgisayarında kalır: hesap, abonelik ya da API anahtarı yok.",
+        "en": "In games you play on your PC or through PS Remote Play, the translation appears on top of the game, and your viewers see it on Kick and OBS streams too. Screen capture, OCR and translation stay on your computer: no account, subscription or API key."
+      },
+      "highlights": [
+        {
+          "title": { "tr": "Yerel yapay zekâ çevirisi", "en": "Local AI translation" },
+          "text": {
+            "tr": "Gemma 4, konuşmanın önceki satırlarını görerek doğal Türkçe yazar. Ücretsiz, internetsiz, kotasız; Robz Vision kendisi kurar.",
+            "en": "Gemma 4 reads the previous lines of the conversation and writes natural Turkish. Free, offline, no quota; Robz Vision sets it up for you."
+          }
+        },
+        {
+          "title": { "tr": "Ekranında ve yayında", "en": "On your screen and on stream" },
+          "text": {
+            "tr": "Taşınabilir bir ekran kutusu ve OBS Tarayıcı Kaynağı. İkisinin yeri ve görünümü ayrı.",
+            "en": "A movable on-screen box and an OBS Browser Source, each with its own position and look."
+          }
+        },
+        {
+          "title": { "tr": "Oyun altyazısının üzerine", "en": "Over the game's subtitle" },
+          "text": {
+            "tr": "İstersen Türkçe, İngilizcenin tam yerine yazılır; oyun Türkçe altyazılıymış gibi görünür.",
+            "en": "Optionally the Turkish text replaces the English line in place, as if the game shipped with Turkish subtitles."
+          }
+        },
+        {
+          "title": { "tr": "Yalnız altyazı okunur", "en": "Only subtitles are read" },
+          "text": {
+            "tr": "Plaka, tabela, neon ve tuş ipuçları çevrilmez. Vice City, Lucia, Jason gibi özel isimler korunur.",
+            "en": "Plates, signs, neon and button prompts are left alone. Proper names such as Vice City, Lucia and Jason are kept."
+          }
+        }
+      ],
+      "requirements": [
+        { "tr": "Windows 10 (2004 ve sonrası) ya da 11, 64 bit", "en": "Windows 10 (2004 or later) or 11, 64-bit" },
+        { "tr": "İlk açılışta çeviri modeli bir kez indirilir (yaklaşık 400 MB)", "en": "The translation model downloads once on first start (about 400 MB)" },
+        { "tr": "İsteğe bağlı yapay zekâ çevirisi: Ollama ve Gemma 4 (yaklaşık 10 GB)", "en": "Optional AI translation: Ollama and Gemma 4 (about 10 GB)" }
+      ],
+      "notice": {
+        "tr": "Bilgisayar ekranını okur; televizyonda çalışmaz.",
+        "en": "The interface is in Turkish only. It reads your PC screen; it does not work on a TV."
+      },
+      "icon": "assets/apps/robz-vision/icon.webp",
+      "screenshots": [
+        {
+          "url": "https://raw.githubusercontent.com/kutsalkiremitci/robz-vision/main/site/img/gta6_sonra.webp",
+          "caption": { "tr": "Türkçe kutu, oyunun İngilizce altyazısının hemen üstünde.", "en": "The Turkish box sits right above the game's English subtitle." }
+        },
+        {
+          "url": "https://raw.githubusercontent.com/kutsalkiremitci/robz-vision/main/site/img/gta6_ustune.webp",
+          "caption": { "tr": "Oyun altyazısının üzerine: Türkçe, İngilizcenin yerine yazılır.", "en": "Over the game's subtitle: Turkish replaces the English line." }
+        },
+        {
+          "url": "https://raw.githubusercontent.com/kutsalkiremitci/robz-vision/main/site/img/ana_pencere.webp",
+          "caption": { "tr": "Ana sayfa: Başlat, son çeviriler ve canlı önizleme.", "en": "Home: Start, recent translations and the live preview." }
+        },
+        {
+          "url": "https://raw.githubusercontent.com/kutsalkiremitci/robz-vision/main/site/img/gorunum.webp",
+          "caption": { "tr": "Görünüm: hazır stiller, yazı tipi ve renkler.", "en": "Appearance: presets, fonts and colours." }
+        },
+        {
+          "url": "https://raw.githubusercontent.com/kutsalkiremitci/robz-vision/main/site/img/ceviri.webp",
+          "caption": { "tr": "Çeviri: motor seçimi, yerel yapay zekâ kurulumu ve sözlük.", "en": "Translation: engine choice, local AI setup and the glossary." }
+        }
+      ],
+      "links": {
+        "website": "https://kutsalkiremitci.github.io/robz-vision/",
+        "guide": "https://github.com/kutsalkiremitci/robz-vision/blob/main/docs/KULLANIM.md"
+      },
+      "releaseNotes": {
+        "from": "## Bu sürümde",
+        "languages": ["tr"]
+      },
+      "windows": {
+        "installer": "inno",
+        "asset": "^RobzVision-Setup-[0-9.]+-x64\\.exe$",
+        "uninstallKey": "{20358419-F95F-4F60-86CE-3AFF9A70B062}_is1",
+        "defaultDir": "%LOCALAPPDATA%\\Programs\\Robz Vision",
+        "exe": "RobzVision.exe"
+      }
+    }
+  ]
+}

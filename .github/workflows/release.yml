@@ -1,0 +1,74 @@
+# Sürüm yayınlama: "vX.Y.Z" etiketi gönderilince kurulum dosyası derlenir ve GitHub sürümüne yüklenir.
+#
+#   1. Sürüm numarasını üç dosyada aynı yap: package.json, src-tauri/Cargo.toml, src-tauri/tauri.conf.json
+#   2. CHANGELOG.md'ye "## X.Y.Z" başlığıyla notları yaz
+#   3. git tag vX.Y.Z && git push origin vX.Y.Z
+#
+# Robz Hub kendi güncellemesini bu sürümdeki "RobzHub-Setup-X.Y.Z.exe" dosyasından alır (catalog.json -> hub.asset);
+# dosya adını değiştirme. GitHub her dosyanın SHA-256 özetini API'de verir; Robz Hub indirdiğini onunla doğrular.
+
+name: Sürüm
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Sürüm numaraları etiketle aynı mı
+        shell: pwsh
+        run: |
+          $tag = "${{ github.ref_name }}".TrimStart('v')
+          $pkg = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          $conf = (Get-Content src-tauri/tauri.conf.json -Raw | ConvertFrom-Json).version
+          $cargo = (Select-String -Path src-tauri/Cargo.toml -Pattern '^version = "(.+)"' | Select-Object -First 1).Matches.Groups[1].Value
+          if ($tag -ne $pkg -or $tag -ne $conf -or $tag -ne $cargo) {
+            throw "Etiket $tag; package.json $pkg, tauri.conf.json $conf, Cargo.toml $cargo"
+          }
+          "VERSION=$tag" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+      - run: npm ci
+      - run: npm test
+      - run: npx tauri build
+
+      - name: Kurulum dosyasını adlandır ve özetini çıkar
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force out | Out-Null
+          $setup = Get-ChildItem src-tauri/target/release/bundle/nsis/*-setup.exe | Select-Object -First 1
+          # Sürümlü ad Robz Hub'ın kendi güncellemesi içindir; sabit ad README ve web sitesindeki
+          # ".../releases/latest/download/RobzHub-Setup.exe" bağlantısının hep en son sürümü vermesi içindir.
+          $names = "RobzHub-Setup-$env:VERSION.exe", "RobzHub-Setup.exe"
+          foreach ($name in $names) { Copy-Item $setup.FullName "out/$name" }
+          $names | ForEach-Object { "$((Get-FileHash "out/$_" -Algorithm SHA256).Hash.ToLower())  $_" } |
+            Out-File out/SHA256SUMS.txt -Encoding ascii
+
+      - name: Sürüm notlarını CHANGELOG.md'den al
+        shell: pwsh
+        run: |
+          $lines = Get-Content CHANGELOG.md -Encoding utf8
+          $start = [array]::IndexOf($lines, "## $env:VERSION")
+          if ($start -lt 0) { throw "CHANGELOG.md içinde '## $env:VERSION' başlığı yok" }
+          $notes = @()
+          for ($i = $start + 1; $i -lt $lines.Count -and -not $lines[$i].StartsWith('## '); $i++) { $notes += $lines[$i] }
+          ($notes -join "`n").Trim() | Out-File out/notes.md -Encoding utf8
+
+      - name: GitHub sürümünü oluştur
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "${{ github.ref_name }}" out/RobzHub-Setup-${{ env.VERSION }}.exe out/RobzHub-Setup.exe out/SHA256SUMS.txt --title "Robz Hub ${{ env.VERSION }}" --notes-file out/notes.md

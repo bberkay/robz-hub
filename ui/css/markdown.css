@@ -1,0 +1,156 @@
+/* Sürüm notları (GitHub Markdown). Başlıklar bir kademe küçültülür: kartın kendi başlığı zaten sürüm adıdır. */
+
+.markdown {
+  max-width: 76ch;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.markdown > :first-child {
+  margin-top: 0;
+}
+.markdown > :last-child {
+  margin-bottom: 0;
+}
+.markdown p,
+.markdown ul,
+.markdown ol,
+.markdown blockquote,
+.markdown pre,
+.markdown table,
+.markdown details {
+  margin: 0 0 12px;
+}
+.markdown h1,
+.markdown h2,
+.markdown h3,
+.markdown h4,
+.markdown h5,
+.markdown h6 {
+  margin: 20px 0 8px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+.markdown h1,
+.markdown h2 {
+  font-size: 16px;
+}
+.markdown h3 {
+  font-size: 14px;
+}
+.markdown h4,
+.markdown h5,
+.markdown h6 {
+  color: var(--fg-muted);
+  font-size: 13px;
+}
+.markdown ul,
+.markdown ol {
+  padding-left: 22px;
+}
+.markdown ul {
+  list-style: disc;
+}
+.markdown ol {
+  list-style: decimal;
+}
+.markdown li {
+  margin: 4px 0;
+}
+.markdown li::marker {
+  color: var(--fg-subtle);
+}
+.markdown li > ul,
+.markdown li > ol {
+  margin: 4px 0 0;
+}
+.markdown strong {
+  font-weight: 600;
+}
+.markdown code {
+  padding: 2px 5px;
+  border-radius: 5px;
+  background: var(--bg-neutral-muted);
+  font-family: var(--font-mono);
+  font-size: 0.88em;
+}
+.markdown pre {
+  padding: 12px 14px;
+  overflow-x: auto;
+  border-radius: var(--radius);
+  background: var(--bg-inset);
+  border: 1px solid var(--border-muted);
+}
+.markdown pre code {
+  padding: 0;
+  background: transparent;
+}
+.markdown blockquote {
+  padding: 0 14px;
+  border-left: 3px solid var(--border-default);
+  color: var(--fg-muted);
+}
+.markdown blockquote.alert {
+  padding: 8px 14px;
+  border-left-color: var(--accent-fg);
+  color: var(--fg-default);
+}
+.markdown blockquote.alert-tip {
+  border-left-color: var(--success-fg);
+}
+.markdown blockquote.alert-important {
+  border-left-color: var(--done-fg);
+}
+.markdown blockquote.alert-warning {
+  border-left-color: var(--attention-fg);
+}
+.markdown blockquote.alert-caution {
+  border-left-color: var(--danger-fg);
+}
+.markdown blockquote > :last-child {
+  margin-bottom: 0;
+}
+.markdown hr {
+  height: 1px;
+  margin: 20px 0;
+  border: 0;
+  background: var(--border-muted);
+}
+.markdown img {
+  display: inline-block;
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--radius);
+  vertical-align: middle;
+}
+.markdown table {
+  display: block;
+  width: max-content;
+  max-width: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.markdown th,
+.markdown td {
+  padding: 6px 12px;
+  border: 1px solid var(--border-default);
+  text-align: left;
+  vertical-align: top;
+}
+.markdown th {
+  background: var(--bg-muted);
+  font-weight: 600;
+}
+.markdown summary {
+  color: var(--accent-fg);
+  cursor: pointer;
+}
+.markdown kbd {
+  padding: 2px 5px;
+  border: 1px solid var(--border-default);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  background: var(--bg-muted);
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+}

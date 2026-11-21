@@ -1,0 +1,27 @@
+{
+  "name": "robz-hub",
+  "productName": "Robz Hub",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Robz açık kaynak uygulamalarını tek yerden indir, güncelle ve başlat.",
+  "license": "MIT",
+  "homepage": "https://github.com/kutsalkiremitci/robz-hub",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kutsalkiremitci/robz-hub.git"
+  },
+  "scripts": {
+    "postinstall": "node scripts/vendor.js",
+    "dev": "tauri dev",
+    "build": "tauri build",
+    "test": "node --test \"test/*.test.mjs\" && cargo test --manifest-path src-tauri/Cargo.toml",
+    "icons": "tauri icon assets/hub/logo.svg -o src-tauri/icons",
+    "screenshots": "node scripts/screenshots.js"
+  },
+  "devDependencies": {
+    "@fontsource-variable/mona-sans": "^5.3.0",
+    "@tauri-apps/cli": "^2.12.6",
+    "htm": "^3.1.1",
+    "marked": "^18.2.1"
+  }
+}
