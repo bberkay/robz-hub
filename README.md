@@ -197,8 +197,9 @@ Hayır. Robz Hub ve içindeki uygulamalar ücretsiz ve açık kaynaktır; hesap 
 <summary><b>Uygulamaları zaten kurmuştum, yeniden kurmam gerekir mi?</b></summary>
 
 Hayır. Robz Hub, Windows'un "Yüklü uygulamalar" kaydına ve uygulamaların varsayılan klasörlerine bakarak kurulu olanları
-ve sürümlerini kendisi bulur. Yeni sürüm varsa **Güncelle** düğmesi görünür. Uygulamanın kendi içindeki "Güncelle"
-düğmesiyle güncellersen Robz Hub bunu da görür.
+ve sürümlerini kendisi bulur. Yeni sürüm varsa **Güncelle** düğmesi görünür. Uygulamayı kendi içindeki "Güncelle"
+düğmesiyle güncellersen, Robz Hub dışında kurar ya da Windows Ayarlar'dan kaldırırsan Robz Hub bunu birkaç saniye içinde
+görür; penceresi kapalıyken ya da tepsideyken de.
 </details>
 
 <details>

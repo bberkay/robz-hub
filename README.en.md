@@ -196,8 +196,9 @@ No. Robz Hub and the apps in it are free and open source; no account or payment 
 <summary><b>I already installed the apps. Do I need to reinstall?</b></summary>
 
 No. Robz Hub finds installed apps and their versions on its own, from the Windows "Installed apps" list and the apps'
-default folders. If a new version exists, an **Update** button appears. If you update from inside the app itself,
-Robz Hub notices that too.
+default folders. If a new version exists, an **Update** button appears. If you update an app from inside the app
+itself, install it outside Robz Hub or uninstall it from Windows Settings, Robz Hub notices within a few seconds, even
+while its window is closed or it's in the tray.
 </details>
 
 <details>

@@ -98,7 +98,7 @@ export default {
       ],
       [
         'Uygulamaları zaten kurduysam ne olur?',
-        'Robz Hub, Windows\'un "Yüklü uygulamalar" kaydına ve uygulamaların klasörlerine bakarak kurulu olanları ve sürümlerini kendisi bulur. Yeniden kurman gerekmez; yeni sürüm varsa "Güncelle" düğmesi görünür.',
+        'Robz Hub, Windows\'un "Yüklü uygulamalar" kaydına ve uygulamaların klasörlerine bakarak kurulu olanları ve sürümlerini kendisi bulur. Yeniden kurman gerekmez; yeni sürüm varsa "Güncelle" düğmesi görünür. Uygulamayı kendi içinden güncellersen Robz Hub bunu birkaç saniye içinde görür.',
       ],
       [
         'Uygulamalar nereye kurulur?',
@@ -232,7 +232,7 @@ export default {
       ['Does Robz Hub cost anything?', 'No. Robz Hub and the apps in it are free and open source. No account or payment needed.'],
       [
         'What if I already installed the apps?',
-        'Robz Hub finds installed apps and their versions on its own, from the Windows "Installed apps" list and the app folders. No need to reinstall; if a new version exists, an "Update" button appears.',
+        'Robz Hub finds installed apps and their versions on its own, from the Windows "Installed apps" list and the app folders. No need to reinstall; if a new version exists, an "Update" button appears. If you update an app from inside itself, Robz Hub notices within a few seconds.',
       ],
       [
         'Where do the apps get installed?',

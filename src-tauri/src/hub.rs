@@ -165,6 +165,28 @@ fn is_running_in(running: &HashMap<String, Vec<u32>>, info: &InstallInfo) -> boo
     info.installed && info.exe_path.as_deref().is_some_and(|exe| running.contains_key(&installs::norm_path(exe)))
 }
 
+/// Yeni algılama sonucunu uygulama durumlarına yazar ("güncelleme var" gibi türetilenler dahil).
+/// Dönüş: kurulum bilgisi ya da çalışıyor durumu değişti mi.
+fn apply_detection(
+    apps: &mut BTreeMap<String, AppState>,
+    defs: &[AppDef],
+    detected: Vec<InstallInfo>,
+    running: &HashMap<String, Vec<u32>>,
+) -> bool {
+    let mut changed = false;
+    for (def, info) in defs.iter().zip(detected) {
+        let Some(app) = apps.get_mut(&def.id) else { continue };
+        let now_running = is_running_in(running, &info);
+        if app.install != info || app.running != now_running {
+            changed = true;
+            app.install = info;
+            app.running = now_running;
+            derive(def, app);
+        }
+    }
+    changed
+}
+
 fn tag_dir(tag: &str) -> String {
     tag.chars().map(|c| if c.is_ascii_alphanumeric() || "._-".contains(c) { c } else { '_' }).collect()
 }
@@ -290,43 +312,28 @@ impl Hub {
         inner.catalog = catalog;
     }
 
-    /// Kurulum durumlarını yeniden okur (kayıt defteri, klasörler, çalışan süreçler).
-    pub fn refresh_installs(&self) {
+    /// Kurulum durumlarını (kayıt defteri, klasörler, exe sürümü) ve çalışan uygulamaları yeniden okur.
+    /// Dönüş: bir şey değişti mi.
+    fn detect_installs(&self) -> bool {
         let defs = self.lock().catalog.apps.clone();
         let running = installs::running_paths(&defs.iter().map(|d| d.windows.exe.clone()).collect::<Vec<_>>());
         let detected: Vec<InstallInfo> = defs.iter().map(installs::detect).collect();
-        {
-            let mut inner = self.lock();
-            inner.installs_refreshed = Some(Instant::now());
-            for (def, info) in defs.iter().zip(detected) {
-                if let Some(app) = inner.apps.get_mut(&def.id) {
-                    app.running = is_running_in(&running, &info);
-                    app.install = info;
-                    derive(def, app);
-                }
-            }
-        }
+        let mut inner = self.lock();
+        inner.installs_refreshed = Some(Instant::now());
+        apply_detection(&mut inner.apps, &defs, detected, &running)
+    }
+
+    /// Kurulum durumlarını yeniden okur ve arayüze her durumda yeni durumu gönderir.
+    pub fn refresh_installs(&self) {
+        self.detect_installs();
         self.changed();
     }
 
-    /// Yalnız "çalışıyor mu" bilgisini yeniler; değişiklik varsa haber verir.
-    pub fn poll_running(&self) {
-        let names: Vec<String> = self.lock().catalog.apps.iter().map(|d| d.windows.exe.clone()).collect();
-        let running = installs::running_paths(&names);
-        let changed = {
-            let mut inner = self.lock();
-            let Inner { catalog, apps, .. } = &mut *inner;
-            let mut changed = false;
-            for def in &catalog.apps {
-                if let Some(app) = apps.get_mut(&def.id) {
-                    let now = is_running_in(&running, &app.install);
-                    changed |= now != app.running;
-                    app.running = now;
-                }
-            }
-            changed
-        };
-        if changed {
+    /// Arka planda 5 sn'de bir (pencere kapalı ya da tepsideyken de): kurulu sürüm, kurulum/kaldırma ve çalışıyor
+    /// bilgisi yeniden okunur; yalnız bir şey değiştiyse arayüze haber verilir. Böylece bir uygulama kendi içinden
+    /// güncellendiğinde, Robz Hub dışında kurulduğunda ya da kaldırıldığında Robz Hub birkaç saniye içinde görür.
+    pub fn poll(&self) {
+        if self.detect_installs() {
             self.changed();
         }
     }
@@ -724,7 +731,7 @@ impl Hub {
         tauri::async_runtime::spawn(async move {
             for delay in [800, 1200, 2000] {
                 tokio::time::sleep(Duration::from_millis(delay)).await;
-                hub.poll_running();
+                hub.poll();
             }
         });
         Ok(())
@@ -750,7 +757,7 @@ impl Hub {
     pub async fn stop(&self, id: &str) -> HubResult<()> {
         let def = self.lock().catalog.app(id).cloned().ok_or_else(|| HubError::with("unknown-app", id))?;
         let closed = installs::close_app(&installs::detect(&def)).await;
-        self.poll_running();
+        self.poll();
         if closed {
             Ok(())
         } else {
@@ -858,5 +865,82 @@ impl Hub {
                 Ok(None)
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn state() -> AppState {
+        AppState {
+            install: InstallInfo::default(),
+            running: false,
+            releases: Vec::new(),
+            latest: None,
+            update_available: false,
+            fetch_status: None,
+            downloads: 0,
+        }
+    }
+
+    fn installed(version: &str, exe: &str) -> InstallInfo {
+        InstallInfo {
+            installed: true,
+            version: Some(version.to_string()),
+            dir: Some(r"C:\Apps\Robz Vision".to_string()),
+            exe_path: Some(exe.to_string()),
+            uninstaller: None,
+            scope: Some("user"),
+            source: Some("registry"),
+        }
+    }
+
+    #[test]
+    fn notices_updates_made_outside_robz_hub() {
+        let catalog = catalog::parse_str(catalog::BUNDLED).unwrap();
+        let defs: Vec<AppDef> = catalog.apps.iter().filter(|d| d.id == "robz-vision").cloned().collect();
+        let exe = r"C:\Apps\Robz Vision\RobzVision.exe";
+        let mut apps = BTreeMap::from([("robz-vision".to_string(), state())]);
+        // GitHub'daki son sürüm 1.6.0 ("güncelleme var" bu listeden türetilir).
+        apps.get_mut("robz-vision").unwrap().releases = vec![Release {
+            id: 1,
+            tag: "v1.6.0".into(),
+            version: "1.6.0".into(),
+            name: "Robz Vision 1.6.0".into(),
+            published_at: String::new(),
+            prerelease: false,
+            url: String::new(),
+            body: String::new(),
+            assets: vec![Asset {
+                name: "RobzVision-Setup-1.6.0-x64.exe".into(),
+                size: 1,
+                url: String::new(),
+                sha256: None,
+                downloads: 34,
+            }],
+        }];
+        let nothing_running = HashMap::new();
+
+        // Kurulu 1.3.2: güncelleme var.
+        assert!(apply_detection(&mut apps, &defs, vec![installed("1.3.2", exe)], &nothing_running));
+        assert!(apps["robz-vision"].update_available);
+
+        // Aynı şey yeniden okunursa değişiklik yok (arayüze boşuna haber gitmez).
+        assert!(!apply_detection(&mut apps, &defs, vec![installed("1.3.2", exe)], &nothing_running));
+
+        // Uygulama kendi içinden 1.6.0'a güncellendi: sürüm değişir, "güncelleme var" kalkar.
+        assert!(apply_detection(&mut apps, &defs, vec![installed("1.6.0", exe)], &nothing_running));
+        assert_eq!(apps["robz-vision"].install.version.as_deref(), Some("1.6.0"));
+        assert!(!apps["robz-vision"].update_available);
+
+        // Kurulu kopya açıldı: yalnız çalışıyor bilgisi değişse de haber verilir.
+        let running = HashMap::from([(installs::norm_path(exe), vec![42])]);
+        assert!(apply_detection(&mut apps, &defs, vec![installed("1.6.0", exe)], &running));
+        assert!(apps["robz-vision"].running);
+
+        // Windows Ayarlar'dan kaldırıldı.
+        assert!(apply_detection(&mut apps, &defs, vec![InstallInfo::default()], &nothing_running));
+        assert!(!apps["robz-vision"].install.installed && !apps["robz-vision"].running);
     }
 }

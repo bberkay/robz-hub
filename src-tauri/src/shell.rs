@@ -113,11 +113,6 @@ pub fn create_window(app: &AppHandle) -> tauri::Result<()> {
     Ok(())
 }
 
-fn window_visible(app: &AppHandle) -> bool {
-    app.get_webview_window(WINDOW)
-        .is_some_and(|w| w.is_visible().unwrap_or(false) && !w.is_minimized().unwrap_or(false))
-}
-
 fn window_focused(app: &AppHandle) -> bool {
     app.get_webview_window(WINDOW).is_some_and(|w| w.is_focused().unwrap_or(false))
 }
@@ -241,16 +236,16 @@ pub fn apply_autostart(app: &AppHandle, enabled: bool) {
     let _ = if enabled { autostart.enable() } else { autostart.disable() };
 }
 
-/// Arka plan zamanlayıcıları: pencere görünürken çalışan uygulamalar 5 sn'de bir, sürümler 6 saatte bir denetlenir.
+/// Arka plan zamanlayıcıları: kurulu uygulamalar 5 sn'de bir (pencere kapalı ya da tepsideyken de), GitHub'daki
+/// sürümler 6 saatte bir denetlenir. 5 sn'lik okuma ucuzdur: yalnız uygulamaların adıyla eşleşen süreçlere ve
+/// birkaç kayıt defteri anahtarına bakılır.
 pub fn start_timers(hub: Arc<Hub>) {
     let poll = hub.clone();
     tauri::async_runtime::spawn(async move {
         let mut tick = tokio::time::interval(Duration::from_secs(5));
         loop {
             tick.tick().await;
-            if window_visible(&poll.app) {
-                poll.poll_running();
-            }
+            poll.poll();
         }
     });
     tauri::async_runtime::spawn(async move {
