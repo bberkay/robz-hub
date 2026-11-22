@@ -1,8 +1,7 @@
 // Güncellemeler: bekleyen güncellemeler (kurulu sürümden sonraki bütün notlarla) ve güncel uygulamalar.
 import { html } from '../../vendor/preact-htm.js';
 import { Icon } from '../icons.js';
-import { lang, t } from '../i18n.js';
-import { selectNotes } from '../notes.js';
+import { t } from '../i18n.js';
 import { bytes, relative } from '../format.js';
 import { navigate, useStore } from '../store.js';
 import * as actions from '../actions.js';
@@ -13,7 +12,6 @@ import {
   JobError,
   JobProgress,
   Label,
-  Markdown,
   ReleaseNotes,
   Spinner,
   VersionDiff,
@@ -49,18 +47,41 @@ function CheckStatus() {
     ${problem && html`<div class="flash flash-attention"><${Icon} name="alert" /><div class="flash-body">${problem}</div></div>`}`;
 }
 
+// Güncellenecek sürümlerin notları: en yenisi açık, atlanan aradaki sürümler kapalı bir bölümde.
+function NotesSince({ def, releases }) {
+  const [latest, ...between] = releases;
+  if (!latest) return null;
+  return html`<div class="update-notes">
+    <h3>${latest.name}</h3>
+    <${ReleaseNotes} def=${def} release=${latest} />
+    ${between.length > 0 &&
+    html`<details class="between">
+      <summary><${Icon} name="chevron-right" />${t('updates.olderReleases', { n: between.length })}</summary>
+      ${between.map(
+        (release) => html`<div class="between-item" key=${release.id}>
+          <h3>${release.name}</h3>
+          <${ReleaseNotes} def=${def} release=${release} collapse=${false} />
+        </div>`,
+      )}
+    </details>`}
+  </div>`;
+}
+
 function HubUpdate() {
   const { data } = useStore();
   if (!data.self.updateAvailable) return null;
   const job = data.jobs[HUB_ID];
   const busy = job && job.phase !== 'error';
-  const def = { id: HUB_ID, name: 'Robz Hub' };
+  const def = { id: HUB_ID, name: 'Robz Hub', repo: data.catalog.hub?.repo, releaseNotes: { from: null, languages: [] } };
   return html`<section class="update-card update-card-hub">
     <header class="update-head">
       <img class="app-icon" src="/assets/hub/icon.png" width="44" height="44" alt="" />
       <div class="update-title">
         <h2>${t('updates.hub.title', { version: data.self.latest.version })}</h2>
-        <p class="muted">${t('updates.hub.body')}</p>
+        <div class="update-meta">
+          <${VersionDiff} from=${data.hubVersion} to=${data.self.latest.version} />
+          <span class="muted">${t('updates.hub.body')}</span>
+        </div>
       </div>
       ${!busy &&
       html`<button class="btn btn-primary" onClick=${() => actions.run('updateSelf')}>
@@ -69,10 +90,7 @@ function HubUpdate() {
     </header>
     ${busy && html`<${JobProgress} def=${def} job=${job} />`}
     ${job?.phase === 'error' && html`<${JobError} def=${def} job=${job} />`}
-    ${data.self.notes &&
-    html`<div class="update-notes">
-      <${Markdown} source=${selectNotes(data.self.notes, { lang: lang() }).markdown} repo=${data.catalog.hub?.repo} />
-    </div>`}
+    <${NotesSince} def=${def} releases=${data.self.releases || []} />
   </section>`;
 }
 
@@ -85,7 +103,6 @@ function UpdateCard({ def }) {
   const newer = app.releases.filter(
     (r) => !r.prerelease && compareVersions(r.version, app.install.version) > 0 && compareVersions(r.version, app.latest.version) <= 0,
   );
-  const [latest, ...between] = newer;
 
   return html`<section class="update-card">
     <header class="update-head">
@@ -104,21 +121,7 @@ function UpdateCard({ def }) {
     </header>
     ${busy && html`<${JobProgress} def=${def} job=${job} />`}
     ${job?.phase === 'error' && html`<${JobError} def=${def} job=${job} />`}
-    ${latest &&
-    html`<div class="update-notes">
-      <h3>${latest.name}</h3>
-      <${ReleaseNotes} def=${def} release=${latest} />
-      ${between.length > 0 &&
-      html`<details class="between">
-        <summary><${Icon} name="chevron-right" />${t('updates.olderReleases', { n: between.length })}</summary>
-        ${between.map(
-          (release) => html`<div class="between-item" key=${release.id}>
-            <h3>${release.name}</h3>
-            <${ReleaseNotes} def=${def} release=${release} collapse=${false} />
-          </div>`,
-        )}
-      </details>`}
-    </div>`}
+    <${NotesSince} def=${def} releases=${newer} />
   </section>`;
 }
 

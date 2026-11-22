@@ -76,7 +76,9 @@ pub struct SelfLatest {
 pub struct SelfState {
     pub latest: Option<SelfLatest>,
     pub update_available: bool,
-    pub notes: Option<String>,
+    /// Kurulu Robz Hub'dan yeni kararlı sürümler, en yenisi önce. Güncelleme kartında en yenisinin notu açık, aradakiler
+    /// kapalı gösterilir: birkaç sürüm atlayan kullanıcı da neler geldiğini görür.
+    pub releases: Vec<Release>,
     pub url: Option<String>,
 }
 
@@ -163,6 +165,19 @@ fn derive(def: &AppDef, app: &mut AppState) {
 /// Kurulu kopyanın exe yolundan çalışan bir süreç var mı (running_paths sonucuna göre)?
 fn is_running_in(running: &HashMap<String, Vec<u32>>, info: &InstallInfo) -> bool {
     info.installed && info.exe_path.as_deref().is_some_and(|exe| running.contains_key(&installs::norm_path(exe)))
+}
+
+/// `current`'tan yeni, `latest`'ten eski ya da ona eşit kararlı sürümler; en yenisi önce.
+fn newer_than(releases: &[Release], current: &str, latest: &str) -> Vec<Release> {
+    let mut newer: Vec<Release> = releases
+        .iter()
+        .filter(|r| {
+            !r.prerelease && version::compare(&r.version, current).is_gt() && version::compare(&r.version, latest).is_le()
+        })
+        .cloned()
+        .collect();
+    newer.sort_by(|a, b| version::compare(&b.version, &a.version));
+    newer
 }
 
 /// Yeni algılama sonucunu uygulama durumlarına yazar ("güncelleme var" gibi türetilenler dahil).
@@ -472,7 +487,7 @@ impl Hub {
                     size: asset.size,
                 }),
                 update_available: version::compare(&release.version, &self.version).is_gt(),
-                notes: Some(release.body.clone()),
+                releases: newer_than(&result.releases, &self.version, &release.version),
                 url: Some(release.url.clone()),
             },
             None => SelfState::default(),
@@ -942,5 +957,35 @@ mod tests {
         // Windows Ayarlar'dan kaldırıldı.
         assert!(apply_detection(&mut apps, &defs, vec![InstallInfo::default()], &nothing_running));
         assert!(!apps["robz-vision"].install.installed && !apps["robz-vision"].running);
+    }
+
+    fn release(version: &str, prerelease: bool) -> Release {
+        Release {
+            id: 1,
+            tag: format!("v{version}"),
+            version: version.into(),
+            name: format!("Robz Hub {version}"),
+            published_at: String::new(),
+            prerelease,
+            url: String::new(),
+            body: String::new(),
+            assets: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn lists_every_hub_release_since_the_installed_one() {
+        let releases = vec![
+            release("0.1.2", false),
+            release("0.2.0-rc1", true),
+            release("0.1.4", false),
+            release("0.1.1", false),
+            release("0.1.3", false),
+            release("0.1.0", false),
+        ];
+        let versions = |list: Vec<Release>| list.into_iter().map(|r| r.version).collect::<Vec<_>>();
+        // 0.1.1 kurulu, son kararlı 0.1.4: aradaki üç sürüm, en yenisi önce; ön sürüm ve eskiler yok.
+        assert_eq!(versions(newer_than(&releases, "0.1.1", "0.1.4")), ["0.1.4", "0.1.3", "0.1.2"]);
+        assert!(newer_than(&releases, "0.1.4", "0.1.4").is_empty());
     }
 }
