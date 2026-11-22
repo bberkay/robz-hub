@@ -3,6 +3,19 @@
 Her sürümün notları burada `## X.Y.Z` başlığı altında durur; sürüm iş akışı (.github/workflows/release.yml) GitHub
 sürüm notunu bu bölümden alır.
 
+## 0.1.4
+
+<!-- tr -->
+- **Dışarıda yapılan değişiklikler birkaç saniyede görünür.** Bir uygulamayı kendi içindeki "Güncelle" düğmesiyle güncellersen, Robz Hub dışında kurarsan ya da Windows Ayarlar'dan kaldırırsan Robz Hub bunu birkaç saniye içinde görür; penceresi kapalıyken ya da tepsideyken de. Sürüm, "Güncelleme var" sayacı ve tepsi menüsü kendiliğinden güncellenir.
+
+<!-- en -->
+<details><summary>English</summary>
+
+- **Changes made elsewhere show up within seconds.** If you update an app with its own "Update" button, install it outside Robz Hub or uninstall it from Windows Settings, Robz Hub notices within a few seconds, even while its window is closed or it's in the tray. The version, the update counter and the tray menu update on their own.
+
+</details>
+<!-- end -->
+
 ## 0.1.3
 
 <!-- tr -->
