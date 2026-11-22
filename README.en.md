@@ -120,14 +120,17 @@ for every user without updating Robz Hub.
 
 ### Home
 
-- **Bundle box** (top): apps meant to be used together. The button follows the state: **Install both** when neither
-  is installed, **Install the missing one** when one is missing (**Install and update** if the other also has an
-  update), **Launch both** when all are installed, with **Update** next to it when there's a new version. The total
-  download size is shown next to it, and each app's version or running state below.
-- **Apps list:** each row shows the installed version, the total download count on GitHub, the `− old` `+ new` change when an update exists, and the
-  buttons that make sense right now (**Install**, **Update**, **Launch**, **Close**). The **⋯** menu at the end has:
-  open install folder, reinstall, website, GitHub repository, report an issue and **Uninstall**.
-- **Recent releases:** new versions of every app in one feed; click one to open its notes.
+- **Featured area** (top): bundles of apps used together and announcements rotate with their artwork (hovering pauses
+  it; the bars at the bottom switch by hand). The bundle button follows the state: **Install both** when neither is
+  installed, **Install the missing one** when one is missing (**Install and update** if the other also has an update),
+  **Launch both** when all are installed, with **Update** and the download size next to it when there's a new version.
+  Below it, each app's status: running, up to date, new version ready, or not installed.
+- **Apps:** each app has a card with cover art: installed version (`− old` `+ new` when an update exists), total
+  downloads on GitHub and the buttons that make sense right now (**Install**, **Update**, **Launch**, **Close**). The
+  card's **⋯** menu has: open install folder, reinstall, website, GitHub repository, report an issue and **Uninstall**.
+  The last card is a place for the next Robz app: once released, it appears there without updating Robz Hub.
+- **Recent releases** and **Community:** the newest releases of every app (click one for its notes), the Kick channel
+  and free setup help on Discord.
 
 ### App page
 
@@ -292,6 +295,7 @@ the top. Running Robz Hubs pick up the new catalog within half an hour (or when 
 | `tagline`, `description`, `role` | `{ "tr": "…", "en": "…" }` or plain text. `role` shows next to the name in bundles. |
 | `highlights`, `requirements`, `notice` | "What it does", "What you need" and the notice box on the app page. |
 | `icon`, `screenshots` | `assets/…` (shipped with the app) or an `https://` URL. |
+| `cover` | Cover art for the app's card on the home page; the first screenshot is used if missing. |
 | `links` | `https://` links such as `website` and `guide`. |
 | `releaseNotes` | Which part of the release notes to show: everything after the `from` heading (`"## Bu sürümde"`), and the notes' languages. |
 | `windows.installer` | `inno` (Inno Setup) or `nsis`. |
@@ -299,8 +303,9 @@ the top. Running Robz Hubs pick up the new catalog within half an hour (or when 
 | `windows.uninstallKey` | Key under `HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall` (Inno: `{AppId}_is1`). |
 | `windows.defaultDir`, `windows.exe` | Folder to check when there's no registry entry (`%LOCALAPPDATA%\Programs\…`) and the exe to run. |
 
-`bundles` groups apps used together into one box on the home page. `announcements` shows a notice at the top of the
-home page (a new app, a stream, a Discord invite).
+`bundles` (apps used together) and `announcements` (a new app, a stream, a Discord invite; `title`, `body`, `url`,
+`linkLabel`, `date`) rotate in the home page's featured area. Both take an `image` for the background; its left side sits
+under the text, so keep the subject on the right and the artwork free of text.
 </details>
 
 **What the app's releases need:**

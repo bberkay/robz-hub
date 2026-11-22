@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "revision": 1,
+  "revision": 2,
   "hub": {
     "repo": "kutsalkiremitci/robz-hub",
     "asset": "^RobzHub-Setup-[0-9.]+\\.exe$"
@@ -21,7 +21,8 @@
         "tr": "Robz Play, PS5'teki 30 FPS oyunu bilgisayarında 60 FPS akıcılığında gösterir. Robz Vision, ekrandaki İngilizce altyazıyı anında Türkçeye çevirir. İkisi birlikte çalışır.",
         "en": "Robz Play shows your PS5's 30 FPS game on your PC with 60 FPS smoothness. Robz Vision translates the on-screen English subtitles to Turkish as you play. They work together."
       },
-      "apps": ["robz-play", "robz-vision"]
+      "apps": ["robz-play", "robz-vision"],
+      "image": "https://raw.githubusercontent.com/kutsalkiremitci/robz-vision/main/site/img/gta6_once.webp"
     }
   ],
   "announcements": [],
@@ -78,6 +79,7 @@
         { "tr": "PlayStation hesabı", "en": "A PlayStation account" }
       ],
       "icon": "assets/apps/robz-play/icon.svg",
+      "cover": "https://raw.githubusercontent.com/kutsalkiremitci/robz-play/robzplay/assets/robzplay/gta-vi-60fps.jpg",
       "screenshots": [
         {
           "url": "https://raw.githubusercontent.com/kutsalkiremitci/robz-play/robzplay/assets/robzplay/gta-vi-60fps.jpg",
@@ -162,6 +164,7 @@
         "en": "The interface is in Turkish only. It reads your PC screen; it does not work on a TV."
       },
       "icon": "assets/apps/robz-vision/icon.webp",
+      "cover": "https://raw.githubusercontent.com/kutsalkiremitci/robz-vision/main/site/img/gta6_kahraman.webp",
       "screenshots": [
         {
           "url": "https://raw.githubusercontent.com/kutsalkiremitci/robz-vision/main/site/img/gta6_sonra.webp",

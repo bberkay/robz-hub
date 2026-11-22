@@ -180,6 +180,13 @@ fn newer_than(releases: &[Release], current: &str, latest: &str) -> Vec<Release>
     newer
 }
 
+/// Yeni sürüm listesini yazar ve ondan türetilenleri ("en son sürüm", "güncelleme var", indirme sayısı) hemen yeniden
+/// hesaplar. Kurulum durumu değişmese de gerekir: yoksa yeni sürüm ancak bir uygulama açılıp kapanınca görünürdü.
+fn set_releases(def: &AppDef, app: &mut AppState, releases: Vec<Release>) {
+    app.releases = releases;
+    derive(def, app);
+}
+
 /// Yeni algılama sonucunu uygulama durumlarına yazar ("güncelleme var" gibi türetilenler dahil).
 /// Dönüş: kurulum bilgisi ya da çalışıyor durumu değişti mi.
 fn apply_detection(
@@ -421,8 +428,9 @@ impl Hub {
         let (mut problem, mut retry_at, mut reached) = (None, None::<u64>, false);
         {
             let mut inner = self.lock();
+            let Inner { catalog, apps, .. } = &mut *inner;
             for ((id, _), result) in repos.iter().zip(results) {
-                let Some(app) = inner.apps.get_mut(id) else { continue };
+                let (Some(def), Some(app)) = (catalog.app(id), apps.get_mut(id)) else { continue };
                 app.fetch_status = Some(result.status.as_str());
                 match result.status {
                     FetchStatus::Ok | FetchStatus::Cached => reached = true,
@@ -437,7 +445,7 @@ impl Hub {
                 if matches!(result.status, FetchStatus::Ok | FetchStatus::Cached | FetchStatus::Missing)
                     || !result.releases.is_empty()
                 {
-                    app.releases = result.releases;
+                    set_releases(def, app, result.releases);
                 }
             }
         }
@@ -909,6 +917,27 @@ mod tests {
             scope: Some("user"),
             source: Some("registry"),
         }
+    }
+
+    #[test]
+    fn new_releases_update_latest_version_right_away() {
+        let catalog = catalog::parse_str(catalog::BUNDLED).unwrap();
+        let def = catalog.app("robz-vision").unwrap();
+        let mut app = state();
+        app.install = installed("1.3.2", r"C:\Apps\Robz Vision\RobzVision.exe");
+        let mut release = release("1.6.0", false);
+        release.assets = vec![Asset {
+            name: "RobzVision-Setup-1.6.0-x64.exe".into(),
+            size: 1,
+            url: String::new(),
+            sha256: None,
+            downloads: 97,
+        }];
+        // Kurulum durumu değişmeden yalnız GitHub'dan yeni liste geldi: güncelleme ve indirme sayısı hemen görünmeli.
+        set_releases(def, &mut app, vec![release]);
+        assert_eq!(app.latest.as_ref().map(|l| l.version.as_str()), Some("1.6.0"));
+        assert!(app.update_available);
+        assert_eq!(app.downloads, 97);
     }
 
     #[test]

@@ -120,14 +120,17 @@ Robz Hub'ı güncellemeye gerek kalmadan bütün kullanıcıların listesinde be
 
 ### Ana sayfa
 
-- **Paket kutusu** (en üstte): birlikte kullanılan uygulamalar. Düğme duruma göre değişir: hiçbiri kurulu değilse
-  **İkisini de kur**, biri eksikse **Eksik olanı kur** (diğerinde güncelleme de varsa **Kur ve güncelle**), hepsi
-  kuruluysa **İkisini de başlat**; güncelleme varsa yanında **Güncelle** çıkar. Düğmenin yanında toplam indirme boyutu,
-  altında her uygulamanın sürümü ya da çalıştığı görünür.
-- **Uygulamalar listesi:** her satırda kurulu sürüm, GitHub'daki toplam indirme sayısı, güncelleme varsa `− eski` `+ yeni` sürüm geçişi ve o an anlamlı
-  olan düğmeler (**Kur**, **Güncelle**, **Başlat**, **Kapat**). Satırın sonundaki **⋯** menüsünde: kurulum klasörünü
-  aç, yeniden kur, web sitesi, GitHub deposu, sorun bildir ve **Kaldır**.
-- **Son sürümler:** bütün uygulamaların yeni sürümleri tek akışta; birine tıklayınca o sürümün notları açılır.
+- **Tanıtım alanı** (en üstte): birlikte kullanılan uygulamaların paketi ve duyurular, görselleriyle sırayla döner
+  (fareyle üzerine gelince durur; alttaki çizgilerle elle geçilir). Paketin düğmesi duruma göre değişir: hiçbiri kurulu
+  değilse **İkisini de kur**, biri eksikse **Eksik olanı kur** (diğerinde güncelleme de varsa **Kur ve güncelle**),
+  hepsi kuruluysa **İkisini de başlat**; güncelleme varsa yanında **Güncelle** ve indirme boyutu çıkar. Altında her
+  uygulamanın durumu yazar: çalışıyor, güncel, yeni sürüm hazır ya da kurulu değil.
+- **Uygulamalar:** her uygulama kapak görselli bir kartta; kurulu sürüm (güncelleme varsa `− eski` `+ yeni`), GitHub'daki
+  toplam indirme sayısı ve o an anlamlı olan düğmeler (**Kur**, **Güncelle**, **Başlat**, **Kapat**). Kartın **⋯**
+  menüsünde: kurulum klasörünü aç, yeniden kur, web sitesi, GitHub deposu, sorun bildir ve **Kaldır**. Son kutu, sıradaki
+  Robz uygulamasının yeri: yayınlanınca Robz Hub'ı güncellemeden burada belirir.
+- **Son sürümler** ve **Topluluk:** bütün uygulamaların en yeni sürümleri (tıklayınca notları açılır), Kick kanalı ve
+  Discord'daki ücretsiz kurulum desteği.
 
 ### Uygulama sayfası
 
@@ -294,6 +297,7 @@ içinde (ya da **Güncellemeleri denetle**'ye basınca) alır.
 | `tagline`, `description`, `role` | `{ "tr": "…", "en": "…" }` ya da düz metin. `role` paket kutusunda adın yanında görünür. |
 | `highlights`, `requirements`, `notice` | Uygulama sayfasındaki "Neler yapar", "Gerekenler" ve uyarı kutusu. |
 | `icon`, `screenshots` | `assets/…` (uygulamanın içindeki dosya) ya da `https://` adresi. |
+| `cover` | Ana sayfadaki kartın kapak görseli; yoksa ilk ekran görüntüsü kullanılır. |
 | `links` | `website`, `guide` gibi `https://` bağlantıları. |
 | `releaseNotes` | Sürüm notunda gösterilecek bölüm: `from` başlığından sonrası (`"## Bu sürümde"`) ve notun dilleri. |
 | `windows.installer` | `inno` (Inno Setup) ya da `nsis`. |
@@ -301,8 +305,9 @@ içinde (ya da **Güncellemeleri denetle**'ye basınca) alır.
 | `windows.uninstallKey` | `HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall` altındaki anahtar (Inno: `{AppId}_is1`). |
 | `windows.defaultDir`, `windows.exe` | Kayıt yoksa bakılacak klasör (`%LOCALAPPDATA%\Programs\…`) ve çalıştırılacak exe. |
 
-`bundles` birlikte kullanılan uygulamaları ana sayfada tek kutuda toplar. `announcements` ana sayfanın üstünde duyuru
-gösterir (yeni uygulama, yayın, Discord daveti gibi).
+`bundles` birlikte kullanılan uygulamaları, `announcements` ise duyuruları (yeni uygulama, yayın, Discord daveti gibi;
+`title`, `body`, `url`, `linkLabel`, `date`) ana sayfanın tanıtım alanında sırayla gösterir. İkisi de arka plan için
+`image` alır; görselin sol tarafı yazının altında kalır, konuyu sağa yerleştir ve görselin üzerinde yazı olmasın.
 </details>
 
 **Uygulamanın sürümlerinde gerekenler:**

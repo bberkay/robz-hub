@@ -92,6 +92,8 @@ pub struct AppDef {
     pub requirements: Vec<Text>,
     pub notice: Option<Text>,
     pub icon: Option<String>,
+    /// Ana sayfadaki uygulama kartının kapak görseli (yoksa ilk ekran görüntüsü).
+    pub cover: Option<String>,
     pub screenshots: Vec<Screenshot>,
     pub links: BTreeMap<String, String>,
     pub release_notes: ReleaseNotesConf,
@@ -104,6 +106,8 @@ pub struct Bundle {
     pub title: Text,
     pub description: Option<Text>,
     pub apps: Vec<String>,
+    /// Ana sayfadaki tanıtım alanının arka plan görseli.
+    pub image: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -115,6 +119,8 @@ pub struct Announcement {
     pub url: Option<String>,
     pub link_label: Option<Text>,
     pub date: Option<String>,
+    /// Ana sayfadaki tanıtım alanının arka plan görseli.
+    pub image: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -239,6 +245,7 @@ fn parse_app(raw: &Value) -> Option<AppDef> {
         requirements: array(&raw["requirements"]).iter().filter_map(|r| text(r, 200)).take(10).collect(),
         notice: text(&raw["notice"], 300),
         icon: image(&raw["icon"]),
+        cover: image(&raw["cover"]),
         screenshots: array(&raw["screenshots"])
             .iter()
             .filter_map(|s| Some(Screenshot { url: image(&s["url"])?, caption: text(&s["caption"], 200) }))
@@ -289,7 +296,13 @@ pub fn parse(raw: &Value) -> Option<Catalog> {
             if members.len() < 2 {
                 return None;
             }
-            Some(Bundle { id, title: text(&b["title"], 120)?, description: text(&b["description"], 500), apps: members })
+            Some(Bundle {
+                id,
+                title: text(&b["title"], 120)?,
+                description: text(&b["description"], 500),
+                apps: members,
+                image: image(&b["image"]),
+            })
         })
         .collect();
 
@@ -303,6 +316,7 @@ pub fn parse(raw: &Value) -> Option<Catalog> {
                 url: matches(&a["url"], &HTTPS),
                 link_label: text(&a["linkLabel"], 40),
                 date: matches(&a["date"], &DATE),
+                image: image(&a["image"]),
             })
         })
         .take(5)
@@ -375,6 +389,7 @@ mod tests {
         let ids: Vec<&str> = catalog.apps.iter().map(|a| a.id.as_str()).collect();
         assert_eq!(ids, ["robz-play", "robz-vision"]);
         assert_eq!(catalog.bundles.len(), 1);
+        assert!(catalog.bundles[0].image.as_deref().is_some_and(|u| u.starts_with("https://")));
         let play = catalog.app("robz-play").unwrap();
         assert!(play.windows.asset_re.is_match("RobzPlay-Setup.exe"));
         assert_eq!(play.windows.installer, InstallerType::Nsis);
