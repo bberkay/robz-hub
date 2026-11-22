@@ -106,8 +106,8 @@ export function Settings() {
           <p class="muted">${t('settings.about.disclaimer')}</p>
           <ul class="about-links">
             ${links.github && html`<li><a href=${links.github}><${Icon} name="github" />${t('link.github')}</a></li>`}
-            ${links.discord && html`<li><a href=${links.discord}><${Icon} name="chat" />${t('link.discord')}</a></li>`}
-            ${links.kick && html`<li><a href=${links.kick}><${Icon} name="live" />${t('link.kick')}</a></li>`}
+            ${links.discord && html`<li><a href=${links.discord}><${Icon} name="discord" />${t('link.discord')}</a></li>`}
+            ${links.kick && html`<li><a href=${links.kick}><${Icon} name="kick" />${t('link.kick')}</a></li>`}
           </ul>
         </div>
       </div>

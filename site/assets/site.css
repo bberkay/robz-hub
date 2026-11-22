@@ -925,6 +925,12 @@ h1 {
   align-items: center;
   gap: 8px;
 }
+.final-links .i-discord {
+  color: #5865f2;
+}
+.final-links .i-kick {
+  color: #53fc18;
+}
 
 .foot {
   padding: 40px 0 56px;

@@ -87,8 +87,8 @@ function Sidebar() {
         />
         <div class="sidebar-links">
           ${links.github && html`<a href=${links.github} title=${t('link.github')}><${Icon} name="github" /></a>`}
-          ${links.discord && html`<a href=${links.discord} title=${t('link.discord')}><${Icon} name="chat" /></a>`}
-          ${links.kick && html`<a href=${links.kick} title=${t('link.kick')}><${Icon} name="live" /></a>`}
+          ${links.discord && html`<a href=${links.discord} title=${t('link.discord')}><${Icon} name="discord" /></a>`}
+          ${links.kick && html`<a href=${links.kick} title=${t('link.kick')}><${Icon} name="kick" /></a>`}
         </div>
       </div>
     </div>

@@ -117,6 +117,15 @@
   background: var(--bg-neutral-muted);
   color: var(--fg-default);
 }
+/* Fareyle üzerine gelince marka rengi */
+.sidebar-links a:hover .icon-discord,
+.about-links a:hover .icon-discord {
+  color: #5865f2;
+}
+.sidebar-links a:hover .icon-kick,
+.about-links a:hover .icon-kick {
+  color: #53fc18;
+}
 
 .main {
   display: grid;
