@@ -6,8 +6,6 @@ on:
   push:
     branches: [main]
     paths: ['site/**', 'catalog.json', 'docs/**', 'ui/assets/**', 'assets/**', '.github/workflows/pages.yml']
-  release:
-    types: [published]
   workflow_dispatch:
 
 permissions:

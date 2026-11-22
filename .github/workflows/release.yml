@@ -15,6 +15,7 @@ on:
 
 permissions:
   contents: write
+  actions: write # sürümden sonra web sitesini yeniden yayınlamak için
 
 jobs:
   release:
@@ -72,3 +73,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh release create "${{ github.ref_name }}" out/RobzHub-Setup-${{ env.VERSION }}.exe out/RobzHub-Setup.exe out/SHA256SUMS.txt --title "Robz Hub ${{ env.VERSION }}" --notes-file out/notes.md
+
+      # Bu iş akışının oluşturduğu sürüm başka iş akışlarını kendiliğinden tetiklemez (GitHub kuralı); sitedeki sürüm
+      # numarası ve indirme boyutu yeni sürümle güncellensin diye site burada elle yeniden yayınlanır.
+      - name: Web sitesini yeniden yayınla
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run pages.yml --ref main -R "${{ github.repository }}"
