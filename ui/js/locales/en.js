@@ -39,6 +39,8 @@ export default {
   'status.versionUnknown': 'Version unknown',
   'stat.downloads': ({ n, raw }) => (raw === 1 ? '1 download' : `${n} downloads`),
   'stat.downloadsTitle': 'Total downloads on GitHub',
+  'stat.stars': ({ n, raw }) => (raw === 1 ? '1 star' : `${n} stars`),
+  'stat.starsTitle': 'Stars on GitHub',
 
   'lang.tr': 'Türkçe',
   'lang.en': 'English',
@@ -54,6 +56,8 @@ export default {
   'toast.updated': '{name} updated to {version}',
   'toast.uninstalled': '{name} uninstalled',
   'toast.updatesFound': ({ n }) => (n === 1 ? '1 app has a new version' : `${n} apps have new versions`),
+  'toast.appFound': 'New app: {name} was added to Robz Hub',
+  'toast.appsFound': ({ n }) => `${n} new apps were added to Robz Hub`,
   'toast.show': 'Show',
   'toast.cacheCleared': 'Downloaded files deleted',
 
@@ -114,6 +118,8 @@ export default {
   'home.next.link': 'First announced on Discord',
 
   'app.tab.overview': 'Overview',
+  'app.discovered': 'Added from GitHub',
+  'app.discoveredTitle': "This app isn't in the catalog yet; it was found automatically as a GitHub repository starting with robz-. Its description comes from the repository.",
   'app.tab.changelog': 'Release notes',
   'app.about': 'About',
   'app.installedVersion': 'Installed version',

@@ -10,6 +10,7 @@ import {
   AppIcon,
   AppLink,
   DownloadCount,
+  StarCount,
   JobError,
   JobProgress,
   Label,
@@ -191,7 +192,11 @@ export function AppPage({ id, tab = 'overview' }) {
               : html`<${Label}>${t('status.notInstalled')}<//>
                   ${app.latest && html`<${VersionTag} version=${app.latest.version} />`}`}
           ${app.running && html`<${RunningBadge} />`}
+          ${def.discovered && html`<span title=${t('app.discoveredTitle')}><${Label}>${t('app.discovered')}<//></span>`}
+        </div>
+        <div class="app-stats">
           <${DownloadCount} n=${app.downloads} />
+          <${StarCount} n=${app.stars} />
         </div>
       </div>
       <${AppActions} def=${def} large />

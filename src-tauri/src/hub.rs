@@ -8,6 +8,7 @@
 //! İşler tek bir kuyrukta sırayla çalışır: iki kurulum programı aynı anda açılmaz, indirmeler birbirini yavaşlatmaz.
 
 use crate::catalog::{self, AppDef, Catalog};
+use crate::discover::{self, ListResult, RepoInfo};
 use crate::download::{self, Progress};
 use crate::error::{HubError, HubResult};
 use crate::github::{self, now_ms, Asset, FetchStatus, Release};
@@ -16,7 +17,7 @@ use crate::settings::Settings;
 use crate::{shell, version};
 use serde::Serialize;
 use serde_json::{json, Value};
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard};
@@ -48,6 +49,8 @@ pub struct AppState {
     pub fetch_status: Option<&'static str>,
     /// Bütün sürümlerin bütün dosyalarının toplam indirme sayısı (GitHub'daki "toplam indirme" rozetiyle aynı hesap).
     pub downloads: u64,
+    /// Deponun GitHub yıldızı (sahibin depo listesinden; henüz okunmadıysa None).
+    pub stars: Option<u64>,
 }
 
 #[derive(Debug, Clone, Default, Serialize)]
@@ -96,6 +99,7 @@ pub struct Paths {
     pub releases: PathBuf,
     pub downloads: PathBuf,
     pub settings: PathBuf,
+    pub discovery: PathBuf,
 }
 
 impl Paths {
@@ -105,6 +109,7 @@ impl Paths {
             releases: data.join("releases"),
             downloads: data.join("downloads"),
             settings: data.join("settings.json"),
+            discovery: data.join("discovered.json"),
         }
     }
 }
@@ -134,6 +139,9 @@ struct Inner {
     cache_bytes: u64,
     catalog_fetched: Option<Instant>,
     installs_refreshed: Option<Instant>,
+    /// GitHub'da kendiliğinden bulunan, katalogda olmayan uygulamalar (discover.rs).
+    found: Vec<AppDef>,
+    discovery: discover::State,
 }
 
 pub struct Hub {
@@ -224,6 +232,13 @@ impl Hub {
             .map_err(|e| HubError::with("unknown", e))?;
         let settings = Settings::load(&paths.settings);
         let (catalog, _source) = catalog::load_local(&paths.catalog_cache);
+        // Daha önce bulunan uygulamalar: önbellekteki sürüm listeleriyle, ağ beklemeden.
+        let discovery = discover::State::load(&paths.discovery);
+        let found: Vec<AppDef> = discovery
+            .repos
+            .iter()
+            .filter_map(|info| discover::app_def(info, &github::cached_releases(&paths.releases, &info.repo)))
+            .collect();
         // Robz Hub'ın kendi güncellemesi için indirilen kurulum dosyası: Robz Hub yeniden açıldıysa işi bitmiştir.
         let _ = std::fs::remove_dir_all(paths.downloads.join(HUB_ID));
         let (queue, rx) = mpsc::unbounded_channel();
@@ -246,6 +261,8 @@ impl Hub {
                 cache_bytes: download::dir_size(&paths.downloads),
                 catalog_fetched: None,
                 installs_refreshed: None,
+                found,
+                discovery,
             }),
             paths,
             queue,
@@ -315,7 +332,9 @@ impl Hub {
         }
     }
 
+    /// Kataloğu (kendiliğinden bulunan uygulamalar eklenerek) uygular; uygulama durumları korunur.
     fn set_catalog(&self, inner: &mut Inner, catalog: Catalog) {
+        let catalog = discover::merge(catalog, &inner.found);
         let mut apps = BTreeMap::new();
         for def in &catalog.apps {
             let mut state = inner.apps.remove(&def.id).unwrap_or_else(|| AppState {
@@ -326,7 +345,9 @@ impl Hub {
                 update_available: false,
                 fetch_status: None,
                 downloads: 0,
+                stars: None,
             });
+            state.stars = inner.discovery.stars_of(&def.repo).or(state.stars);
             derive(def, &mut state);
             apps.insert(def.id.clone(), state);
         }
@@ -338,8 +359,14 @@ impl Hub {
     /// Dönüş: bir şey değişti mi.
     fn detect_installs(&self) -> bool {
         let defs = self.lock().catalog.apps.clone();
-        let running = installs::running_paths(&defs.iter().map(|d| d.windows.exe.clone()).collect::<Vec<_>>());
         let detected: Vec<InstallInfo> = defs.iter().map(installs::detect).collect();
+        // Çalışan süreçler kurulu exe'lerin adıyla aranır (kendiliğinden bulunanlarda exe adı katalogda yazmaz).
+        let names: Vec<String> = detected
+            .iter()
+            .filter_map(|i| i.exe_path.as_deref())
+            .filter_map(|p| std::path::Path::new(p).file_name().map(|n| n.to_string_lossy().to_string()))
+            .collect();
+        let running = installs::running_paths(&names);
         let mut inner = self.lock();
         inner.installs_refreshed = Some(Instant::now());
         apply_detection(&mut inner.apps, &defs, detected, &running)
@@ -418,12 +445,21 @@ impl Hub {
             }
         }
 
+        // Yeni Robz uygulamaları ve yıldız sayıları (depo listesi saatte en çok bir kez sorulur).
+        let (candidates, first_discovery) = self.discover().await;
+
         let repos: Vec<(String, String)> =
             self.lock().catalog.apps.iter().map(|d| (d.id.clone(), d.repo.clone())).collect();
-        let results = futures_util::future::join_all(
-            repos.iter().map(|(_, repo)| github::fetch_releases(&self.client, repo, &self.paths.releases)),
+        let (results, candidate_results) = futures_util::future::join(
+            futures_util::future::join_all(
+                repos.iter().map(|(_, repo)| github::fetch_releases(&self.client, repo, &self.paths.releases)),
+            ),
+            futures_util::future::join_all(
+                candidates.iter().map(|info| github::fetch_releases(&self.client, &info.repo, &self.paths.releases)),
+            ),
         )
         .await;
+        let found_now = self.add_found(&candidates, candidate_results);
 
         let (mut problem, mut retry_at, mut reached) = (None, None::<u64>, false);
         {
@@ -479,6 +515,85 @@ impl Hub {
             shell::updates_found(self, &fresh);
             self.notice(json!({ "type": "updates-found", "apps": fresh }));
         }
+        // İlk denetimde bulunanlar zaten listededir; sonradan çıkan yeni bir uygulama haber verilir.
+        if !found_now.is_empty() && !first_discovery {
+            self.notice(json!({ "type": "apps-found", "apps": found_now }));
+        }
+    }
+
+    /// Sahibin depo listesini (vakti geldiyse) okur: yıldız sayılarını günceller, listeden kalkan bulunmuş uygulamaları
+    /// çıkarır ve sürüm listesine bakılacak yeni robz- depolarını döndürür. İkinci değer: bu ilk denetim mi.
+    async fn discover(&self) -> (Vec<RepoInfo>, bool) {
+        let (hub_repo, state) = {
+            let inner = self.lock();
+            (inner.catalog.hub.as_ref().map(|h| h.repo.clone()), inner.discovery.clone())
+        };
+        let now = now_ms();
+        let Some(hub_repo) = hub_repo.filter(|_| state.due(now)) else { return (Vec::new(), false) };
+        let Some(owner) = discover::owner_of(&hub_repo).map(str::to_string) else { return (Vec::new(), false) };
+        let result = discover::fetch_list(&self.client, &owner, &hub_repo, state.etag.as_deref()).await;
+
+        let mut inner = self.lock();
+        match result {
+            ListResult::Changed { repos, stars, etag } => {
+                inner.discovery.repos = repos;
+                inner.discovery.stars = stars;
+                inner.discovery.etag = etag;
+            }
+            ListResult::Same => {}
+            ListResult::Failed => return (Vec::new(), false),
+        }
+        inner.discovery.checked_at = now;
+        let listed: HashSet<String> = inner.discovery.repos.iter().map(|r| r.repo.to_ascii_lowercase()).collect();
+        inner.discovery.not_apps.retain(|repo, _| listed.contains(repo));
+        inner.discovery.save(&self.paths.discovery);
+        inner.found.retain(|d| listed.contains(&d.repo.to_ascii_lowercase()));
+        let catalog = inner.catalog.clone();
+        self.set_catalog(&mut inner, catalog);
+
+        let known: HashSet<String> = inner.catalog.apps.iter().map(|a| a.repo.to_ascii_lowercase()).collect();
+        let candidates = inner
+            .discovery
+            .repos
+            .iter()
+            .filter(|r| {
+                let key = r.repo.to_ascii_lowercase();
+                !known.contains(&key)
+                    && inner.discovery.not_apps.get(&key).is_none_or(|t| now.saturating_sub(*t) >= discover::RETRY_NOT_APP_MS)
+            })
+            .cloned()
+            .collect();
+        (candidates, state.checked_at == 0)
+    }
+
+    /// Yeni robz- depolarının sürüm listelerine bakar: Windows kurulum dosyası olanlar uygulama olarak eklenir.
+    /// Dönüş: eklenen uygulamalar ({ id, name }).
+    fn add_found(&self, candidates: &[RepoInfo], results: Vec<github::FetchResult>) -> Vec<Value> {
+        if candidates.is_empty() {
+            return Vec::new();
+        }
+        let now = now_ms();
+        let mut added = Vec::new();
+        let mut inner = self.lock();
+        for (info, result) in candidates.iter().zip(results) {
+            if !matches!(result.status, FetchStatus::Ok | FetchStatus::Cached | FetchStatus::Missing) {
+                continue; // internet ya da sınır: sonraki denetimde yeniden denenir
+            }
+            match discover::app_def(info, &result.releases) {
+                Some(def) => {
+                    added.push(json!({ "id": def.id, "name": def.name }));
+                    inner.found.retain(|d| d.id != def.id);
+                    inner.found.push(def);
+                }
+                None => {
+                    inner.discovery.not_apps.insert(info.repo.to_ascii_lowercase(), now);
+                }
+            }
+        }
+        inner.discovery.save(&self.paths.discovery);
+        let catalog = inner.catalog.clone();
+        self.set_catalog(&mut inner, catalog);
+        added
     }
 
     /// Robz Hub'ın kendi yeni sürümü var mı? Depo henüz yoksa ya da sürüm yayınlanmadıysa sessizce geçilir.
@@ -904,6 +1019,7 @@ mod tests {
             update_available: false,
             fetch_status: None,
             downloads: 0,
+            stars: None,
         }
     }
 

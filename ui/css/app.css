@@ -485,8 +485,14 @@
   border-radius: 22%;
 }
 .app-icon-empty {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: var(--bg-neutral-muted);
+  color: var(--fg-muted);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  user-select: none;
 }
 
 .app-link {
@@ -727,13 +733,44 @@
 }
 
 /* GitHub'daki indirme sayısı */
-.dl-count {
+/* İndirme ve yıldız sayısı: beyaz yazı, simgeler sakin; dikkat çeker ama bağırmaz. */
+.dl-count,
+.star-count {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  color: var(--fg-muted);
+  color: var(--fg-default);
   font-size: 12px;
+  font-weight: 500;
   white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.dl-count .icon {
+  color: var(--fg-muted);
+}
+.star-count .icon-star {
+  color: #e3b341;
+}
+.app-stats {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+.app-stats .dl-count,
+.app-stats .star-count {
+  gap: 6px;
+  padding: 3px 10px;
+  border: 1px solid var(--border-default);
+  border-radius: 999px;
+  background: var(--bg-neutral-muted);
+  font-size: 13px;
+}
+.app-stats .dl-count .icon,
+.app-stats .star-count .icon {
+  width: 14px;
+  height: 14px;
 }
 
 /* ==== iş ilerlemesi ============================================================================================== */

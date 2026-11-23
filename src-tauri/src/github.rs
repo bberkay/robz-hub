@@ -1,8 +1,10 @@
 //! GitHub sürümleri: bir deponun yayınlanmış sürümlerini okur ve diske önbellekler.
 //!
-//! Kimlik doğrulamasız API saatte 60 istekle sınırlıdır. Her yanıtın ETag'i saklanır ve sonraki istekte If-None-Match
-//! ile gönderilir: değişiklik yoksa GitHub 304 döner ve bu istek sınıra sayılmaz. Hata, sınır ya da internet yokken
-//! önbellekteki son liste kullanılır. Kişisel bilgi gönderilmez; User-Agent yalnız "RobzHub/<sürüm>"dür.
+//! Kimlik doğrulamasız API saatte 60 istekle sınırlıdır (aynı ağdaki bütün cihazlar için ortak). Her yanıtın ETag'i
+//! saklanır ve sonraki istekte If-None-Match ile gönderilir: değişiklik yoksa GitHub boş bir 304 döner. Kimliksiz
+//! isteklerde 304 de sınırdan düşer (ölçüldü); kazanç veri boyutundadır, bu yüzden denetimler seyrek tutulur. Hata, sınır
+//! ya da internet yokken önbellekteki son liste kullanılır. Kişisel bilgi gönderilmez; User-Agent yalnız
+//! "RobzHub/<sürüm>"dür.
 
 use crate::version;
 use regex::Regex;

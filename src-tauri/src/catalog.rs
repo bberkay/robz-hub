@@ -22,14 +22,14 @@ fn re(pattern: &str) -> Regex {
     Regex::new(pattern).expect("geçerli düzenli ifade")
 }
 
-static ID: LazyLock<Regex> = LazyLock::new(|| re(r"^[a-z0-9][a-z0-9-]{0,39}$"));
-static REPO: LazyLock<Regex> = LazyLock::new(|| re(r"^[A-Za-z0-9][A-Za-z0-9-]{0,38}/[A-Za-z0-9._-]{1,100}$"));
-static EXE: LazyLock<Regex> = LazyLock::new(|| re(r"(?i)^[A-Za-z0-9 _.-]{1,60}\.exe$"));
+pub(crate) static ID: LazyLock<Regex> = LazyLock::new(|| re(r"^[a-z0-9][a-z0-9-]{0,39}$"));
+pub(crate) static REPO: LazyLock<Regex> = LazyLock::new(|| re(r"^[A-Za-z0-9][A-Za-z0-9-]{0,38}/[A-Za-z0-9._-]{1,100}$"));
+pub(crate) static EXE: LazyLock<Regex> = LazyLock::new(|| re(r"(?i)^[A-Za-z0-9 _.-]{1,60}\.exe$"));
 pub static SAFE_KEY: LazyLock<Regex> = LazyLock::new(|| re(r"^[A-Za-z0-9 _.{}-]{1,120}$"));
 static DEFAULT_DIR: LazyLock<Regex> = LazyLock::new(|| {
     re(r"(?i)^%(LOCALAPPDATA|APPDATA|PROGRAMFILES|PROGRAMFILES\(X86\))%(\\[A-Za-z0-9 _.-]{1,60}){1,4}$")
 });
-static HTTPS: LazyLock<Regex> = LazyLock::new(|| re(r#"^https://[^\s"'<>]+$"#));
+pub(crate) static HTTPS: LazyLock<Regex> = LazyLock::new(|| re(r#"^https://[^\s"'<>]+$"#));
 static LOCAL_IMAGE: LazyLock<Regex> = LazyLock::new(|| re(r"^assets/[A-Za-z0-9/_.-]+\.(png|webp|svg|jpg)$"));
 static LINK_KEY: LazyLock<Regex> = LazyLock::new(|| re(r"^[a-z]{2,20}$"));
 static DATE: LazyLock<Regex> = LazyLock::new(|| re(r"^\d{4}-\d{2}-\d{2}$"));
@@ -64,6 +64,9 @@ pub struct ReleaseNotesConf {
 pub enum InstallerType {
     Inno,
     Nsis,
+    /// Kendiliğinden bulunan uygulamalar: tür, indirilen kurulum dosyasının içinden okunur (installs::sniff_installer).
+    /// Katalogda yazılamaz.
+    Auto,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -98,6 +101,8 @@ pub struct AppDef {
     pub links: BTreeMap<String, String>,
     pub release_notes: ReleaseNotesConf,
     pub windows: WindowsConf,
+    /// Katalogda yok; GitHub'da robz- ile başlayan herkese açık bir depo olarak kendiliğinden bulundu (discover.rs).
+    pub discovered: bool,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -167,7 +172,7 @@ fn matches(value: &Value, pattern: &Regex) -> Option<String> {
 }
 
 /// { tr, en } çifti ya da düz metin; ikisi de { tr, en } olarak döner.
-fn text(value: &Value, max: usize) -> Option<Text> {
+pub(crate) fn text(value: &Value, max: usize) -> Option<Text> {
     if let Some(s) = value.as_str() {
         return Some(Text { tr: truncate(s, max), en: truncate(s, max) });
     }
@@ -262,6 +267,7 @@ fn parse_app(raw: &Value) -> Option<AppDef> {
                 .collect(),
         },
         windows: WindowsConf { installer, asset, uninstall_key, default_dir, exe, asset_re },
+        discovered: false,
     })
 }
 

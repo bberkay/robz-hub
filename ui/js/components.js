@@ -8,10 +8,31 @@ import { selectNotes } from './notes.js';
 import { navigate, useStore } from './store.js';
 import * as actions from './actions.js';
 
+// Simge yoksa ya da yüklenemezse (ör. kendiliğinden bulunan bir uygulamanın deposunda yoksa) adın baş harfleri.
 export function AppIcon({ def, size = 40 }) {
   const src = imageUrl(def.icon);
-  if (!src) return html`<span class="app-icon app-icon-empty" style=${{ width: size, height: size }}></span>`;
-  return html`<img class="app-icon" src=${src} width=${size} height=${size} alt="" draggable=${false} />`;
+  const [failed, setFailed] = useState(false);
+  useEffect(() => setFailed(false), [src]);
+  if (!src || failed) {
+    const letters = def.name
+      .split(/\s+/)
+      .filter(Boolean)
+      .map((w) => w[0].toLocaleUpperCase())
+      .slice(0, 2)
+      .join('');
+    return html`<span class="app-icon app-icon-empty" style=${{ width: size, height: size, fontSize: Math.round(size * 0.34) }} aria-hidden="true"
+      >${letters}</span
+    >`;
+  }
+  return html`<img
+    class="app-icon"
+    src=${src}
+    width=${size}
+    height=${size}
+    alt=""
+    draggable=${false}
+    onError=${() => setFailed(true)}
+  />`;
 }
 
 // Sürüm numarası, git etiketi gibi.
@@ -43,6 +64,14 @@ export function DownloadCount({ n }) {
   if (!n) return null;
   return html`<span class="dl-count" title=${t('stat.downloadsTitle')}>
     <${Icon} name="download" size=${12} />${t('stat.downloads', { n: count(n), raw: n })}
+  </span>`;
+}
+
+// GitHub yıldızı: sarı yıldız ve sayı.
+export function StarCount({ n }) {
+  if (!n) return null;
+  return html`<span class="star-count" title=${t('stat.starsTitle')}>
+    <${Icon} name="star" size=${12} class="icon-star" />${t('stat.stars', { n: count(n), raw: n })}
   </span>`;
 }
 

@@ -8,7 +8,7 @@ import { bytes, imageUrl, relative } from '../format.js';
 import { excerpt, selectNotes } from '../notes.js';
 import { navigate, useStore } from '../store.js';
 import * as actions from '../actions.js';
-import { AppActions, AppIcon, AppLink, DownloadCount, JobError, RunningBadge, Spinner, VersionState } from '../components.js';
+import { AppActions, AppIcon, AppLink, DownloadCount, StarCount, JobError, RunningBadge, Spinner, VersionState } from '../components.js';
 
 const SLIDE_MS = 8000;
 const reducedMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
@@ -168,6 +168,7 @@ function AppCard({ def }) {
         <h3><${AppLink} def=${def} /></h3>
         <${VersionState} app=${app} />
         <${DownloadCount} n=${app.downloads} />
+        <${StarCount} n=${app.stars} />
       </div>
       <p class="muted">${pick(def.tagline)}</p>
       <div class="app-card-footer">

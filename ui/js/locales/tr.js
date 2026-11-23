@@ -39,6 +39,8 @@ export default {
   'status.versionUnknown': 'Sürümü bilinmiyor',
   'stat.downloads': ({ n }) => `${n} indirme`,
   'stat.downloadsTitle': "GitHub'daki toplam indirme sayısı",
+  'stat.stars': ({ n }) => `${n} yıldız`,
+  'stat.starsTitle': "GitHub'da aldığı yıldız",
 
   'lang.tr': 'Türkçe',
   'lang.en': 'English',
@@ -54,6 +56,8 @@ export default {
   'toast.updated': '{name} {version} sürümüne güncellendi',
   'toast.uninstalled': '{name} kaldırıldı',
   'toast.updatesFound': ({ n }) => `${n} uygulama için yeni sürüm var`,
+  'toast.appFound': "Yeni uygulama: {name} Robz Hub'a eklendi",
+  'toast.appsFound': ({ n }) => `${n} yeni uygulama Robz Hub'a eklendi`,
   'toast.show': 'Göster',
   'toast.cacheCleared': 'İndirilen dosyalar silindi',
 
@@ -114,6 +118,8 @@ export default {
   'home.next.link': "İlk duyuru Discord'da",
 
   'app.tab.overview': 'Genel bakış',
+  'app.discovered': "GitHub'dan eklendi",
+  'app.discoveredTitle': "Bu uygulama kataloğa henüz eklenmedi; GitHub'da robz- ile başlayan bir depo olarak kendiliğinden bulundu. Açıklaması deponun açıklamasıdır.",
   'app.tab.changelog': 'Sürüm notları',
   'app.about': 'Hakkında',
   'app.installedVersion': 'Kurulu sürüm',

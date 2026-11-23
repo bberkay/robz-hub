@@ -267,6 +267,13 @@ function onNotice(notice) {
     });
   } else if (notice.type === 'uninstalled') {
     toast(t('toast.uninstalled', { name: notice.name }), { kind: 'success' });
+  } else if (notice.type === 'apps-found') {
+    const first = notice.apps[0];
+    toast(notice.apps.length === 1 ? t('toast.appFound', { name: first.name }) : t('toast.appsFound', { n: notice.apps.length }), {
+      kind: 'success',
+      timeout: 12000,
+      action: { label: t('toast.show'), onSelect: () => navigate({ view: 'app', id: first.id, tab: 'overview' }) },
+    });
   } else if (notice.type === 'updates-found' && store.route.view !== 'updates') {
     toast(t('toast.updatesFound', { n: notice.apps.length }), {
       action: { label: t('toast.show'), onSelect: () => navigate({ view: 'updates' }) },

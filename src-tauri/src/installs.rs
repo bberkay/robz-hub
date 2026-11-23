@@ -33,11 +33,13 @@ pub struct InstallInfo {
     pub source: Option<&'static str>,
 }
 
-// Kurulum parametreleri türe göre sabittir; katalogdan parametre alınmaz.
+// Kurulum parametreleri türe göre sabittir; katalogdan parametre alınmaz. Türü bilinmeyen kurulum dosyası
+// parametresiz (kullanıcının göreceği pencereyle) çalışır.
 fn install_args(kind: InstallerType) -> &'static [&'static str] {
     match kind {
         InstallerType::Inno => &["/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/SP-", "/NOCANCEL", "/NORESTARTAPPLICATIONS"],
         InstallerType::Nsis => &["/S"],
+        InstallerType::Auto => &[],
     }
 }
 
@@ -45,14 +47,58 @@ fn uninstall_args(kind: InstallerType) -> &'static [&'static str] {
     match kind {
         InstallerType::Inno => &["/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART"],
         InstallerType::Nsis => &["/S"],
+        InstallerType::Auto => &[],
     }
 }
 
-fn uninstaller_name(kind: InstallerType) -> &'static str {
+fn uninstaller_name(kind: InstallerType) -> Option<&'static str> {
     match kind {
-        InstallerType::Inno => "unins000.exe",
-        InstallerType::Nsis => "Uninstall.exe",
+        InstallerType::Inno => Some("unins000.exe"),
+        InstallerType::Nsis => Some("Uninstall.exe"),
+        InstallerType::Auto => None,
     }
+}
+
+/// Kaldırıcının türü adından: Inno Setup'ınki her zaman unins000.exe (unins001.exe…), gerisi NSIS sayılır.
+pub fn uninstaller_kind(path: &Path) -> InstallerType {
+    let name = path.file_name().map(|n| n.to_string_lossy().to_ascii_lowercase()).unwrap_or_default();
+    let digits = name.strip_prefix("unins").and_then(|rest| rest.strip_suffix(".exe"));
+    if digits.is_some_and(|d| !d.is_empty() && d.chars().all(|c| c.is_ascii_digit())) {
+        InstallerType::Inno
+    } else {
+        InstallerType::Nsis
+    }
+}
+
+/// Kurulum dosyasının türü, içindeki imzadan: Inno Setup "Inno Setup Setup Data", NSIS "NullsoftInst".
+/// İkisi de dosyanın başındaki birkaç megabaytta durur; bulunamazsa None.
+pub fn sniff_installer(path: &Path) -> Option<InstallerType> {
+    use std::io::Read;
+    const INNO: &[u8] = b"Inno Setup Setup Data";
+    const NSIS: &[u8] = b"NullsoftInst";
+    const LIMIT: usize = 32 * 1024 * 1024;
+    let mut file = std::fs::File::open(path).ok()?;
+    let mut window: Vec<u8> = Vec::new();
+    let mut chunk = vec![0u8; 1024 * 1024];
+    let mut read_total = 0usize;
+    while read_total < LIMIT {
+        let n = file.read(&mut chunk).ok()?;
+        if n == 0 {
+            break;
+        }
+        read_total += n;
+        // Bir önceki parçanın sonu da aranır: imza iki parçaya bölünmüş olabilir.
+        let keep = window.len().min(INNO.len());
+        window.drain(..window.len() - keep);
+        window.extend_from_slice(&chunk[..n]);
+        if window.windows(INNO.len()).any(|w| w == INNO) {
+            return Some(InstallerType::Inno);
+        }
+        if window.windows(NSIS.len()).any(|w| w == NSIS) {
+            return Some(InstallerType::Nsis);
+        }
+    }
+    None
 }
 
 /// "%LOCALAPPDATA%\Programs\Robz Play" -> C:\Users\…\AppData\Local\Programs\Robz Play
@@ -103,7 +149,7 @@ fn find_uninstaller(dir: &Path, kind: InstallerType, hint: Option<PathBuf>) -> O
     if let Some(hint) = hint.filter(|h| is_file(h) && is_inside(h, dir)) {
         return Some(hint);
     }
-    Some(dir.join(uninstaller_name(kind))).filter(|p| is_file(p))
+    Some(dir.join(uninstaller_name(kind)?)).filter(|p| is_file(p))
 }
 
 // ---- Windows kayıt defteri, dosya sürümü, süreç listesi -------------------------------------------------------------
@@ -113,34 +159,49 @@ struct RegistryEntry {
     location: Option<String>,
     version: Option<String>,
     uninstall: Option<String>,
+    /// Çoğu kurulum programı uygulamanın exe'sini yazar: "C:\…\App.exe",0
+    display_icon: Option<String>,
+    /// Tauri'nin NSIS kurulumu exe adını ayrıca yazar.
+    main_binary: Option<String>,
+}
+
+// Kullanıcıya kurulum (HKCU) önce; ardından tüm kullanıcılar için 64 ve 32 bit görünümler.
+#[cfg(windows)]
+const UNINSTALL_ROOTS: [(winreg::HKEY, u32, &str); 3] = [
+    (winreg::enums::HKEY_CURRENT_USER, 0, "user"),
+    (winreg::enums::HKEY_LOCAL_MACHINE, winreg::enums::KEY_WOW64_64KEY, "machine"),
+    (winreg::enums::HKEY_LOCAL_MACHINE, winreg::enums::KEY_WOW64_32KEY, "machine"),
+];
+#[cfg(windows)]
+const UNINSTALL_PATH: &str = r"Software\Microsoft\Windows\CurrentVersion\Uninstall";
+
+#[cfg(windows)]
+fn read_entry(key: &winreg::RegKey, scope: &'static str) -> RegistryEntry {
+    let get = |name: &str| key.get_value::<String, _>(name).ok().filter(|v| !v.trim().is_empty());
+    RegistryEntry {
+        scope,
+        location: get("InstallLocation").or_else(|| get("Inno Setup: App Path")),
+        version: get("DisplayVersion"),
+        uninstall: get("UninstallString"),
+        display_icon: get("DisplayIcon"),
+        main_binary: get("MainBinaryName"),
+    }
 }
 
 #[cfg(windows)]
 fn registry_entries(key: &str) -> Vec<RegistryEntry> {
-    use winreg::enums::{HKEY_CURRENT_USER, HKEY_LOCAL_MACHINE, KEY_READ, KEY_WOW64_32KEY, KEY_WOW64_64KEY};
+    use winreg::enums::KEY_READ;
     use winreg::RegKey;
 
     if !crate::catalog::SAFE_KEY.is_match(key) {
         return Vec::new();
     }
-    let path = format!(r"Software\Microsoft\Windows\CurrentVersion\Uninstall\{key}");
-    // Kullanıcıya kurulum (HKCU) önce; ardından tüm kullanıcılar için 64 ve 32 bit görünümler.
-    let locations = [
-        (HKEY_CURRENT_USER, 0, "user"),
-        (HKEY_LOCAL_MACHINE, KEY_WOW64_64KEY, "machine"),
-        (HKEY_LOCAL_MACHINE, KEY_WOW64_32KEY, "machine"),
-    ];
-    locations
+    let path = format!(r"{UNINSTALL_PATH}\{key}");
+    UNINSTALL_ROOTS
         .into_iter()
         .filter_map(|(hive, view, scope)| {
             let key = RegKey::predef(hive).open_subkey_with_flags(&path, KEY_READ | view).ok()?;
-            let get = |name: &str| key.get_value::<String, _>(name).ok().filter(|v| !v.trim().is_empty());
-            Some(RegistryEntry {
-                scope,
-                location: get("InstallLocation").or_else(|| get("Inno Setup: App Path")),
-                version: get("DisplayVersion"),
-                uninstall: get("UninstallString"),
-            })
+            Some(read_entry(&key, scope))
         })
         .collect()
 }
@@ -148,6 +209,84 @@ fn registry_entries(key: &str) -> Vec<RegistryEntry> {
 #[cfg(not(windows))]
 fn registry_entries(_key: &str) -> Vec<RegistryEntry> {
     Vec::new()
+}
+
+/// Görünen adı aranan adlardan biriyle eşleşen kayıtlar (kendiliğinden bulunan uygulamalar için: kayıt anahtarı önceden
+/// bilinmez). Ad yalnız harf ve rakamlarıyla karşılaştırılır; sonuna sürüm eklenmiş adlar da kabul edilir
+/// ("Robz Vision version 1.6.0").
+#[cfg(windows)]
+fn registry_search(wanted: &[String]) -> Vec<RegistryEntry> {
+    use winreg::enums::KEY_READ;
+    use winreg::RegKey;
+
+    let mut found = Vec::new();
+    for (hive, view, scope) in UNINSTALL_ROOTS {
+        let Ok(root) = RegKey::predef(hive).open_subkey_with_flags(UNINSTALL_PATH, KEY_READ | view) else { continue };
+        for name in root.enum_keys().flatten() {
+            let Ok(key) = root.open_subkey_with_flags(&name, KEY_READ | view) else { continue };
+            let Ok(display) = key.get_value::<String, _>("DisplayName") else { continue };
+            if name_matches(&display, wanted) {
+                found.push(read_entry(&key, scope));
+            }
+        }
+    }
+    found
+}
+
+#[cfg(not(windows))]
+fn registry_search(_wanted: &[String]) -> Vec<RegistryEntry> {
+    Vec::new()
+}
+
+/// "Robz DPI", "RobzDPI", "Robz Vision version 1.6.0" gibi adlar "robzdpi" / "robzvision" ile eşleşir.
+pub fn name_matches(display: &str, wanted: &[String]) -> bool {
+    let display = crate::discover::normalize(display);
+    wanted.iter().filter(|w| !w.is_empty()).any(|w| {
+        display.strip_prefix(w.as_str()).is_some_and(|rest| {
+            let rest = rest.strip_prefix("version").or_else(|| rest.strip_prefix('v')).unwrap_or(rest);
+            rest.chars().all(|c| c.is_ascii_digit())
+        })
+    })
+}
+
+/// Kendiliğinden bulunan bir uygulamanın kurulu exe'si: Tauri'nin yazdığı ad, DisplayIcon ya da klasördeki tek
+/// (kaldırıcı olmayan) exe.
+fn resolve_exe(dir: &Path, entry: &RegistryEntry, wanted: &[String]) -> Option<PathBuf> {
+    let candidate = |path: PathBuf| (is_file(&path) && is_inside(&path, dir) && !is_uninstaller(&path)).then_some(path);
+    if let Some(name) = entry.main_binary.as_deref().filter(|n| crate::catalog::EXE.is_match(n)) {
+        if let Some(path) = candidate(dir.join(name)) {
+            return Some(path);
+        }
+    }
+    if let Some(icon) = entry.display_icon.as_deref().and_then(icon_path) {
+        if let Some(path) = candidate(icon) {
+            return Some(path);
+        }
+    }
+    let exes: Vec<PathBuf> = std::fs::read_dir(dir)
+        .ok()?
+        .flatten()
+        .map(|e| e.path())
+        .filter(|p| p.extension().is_some_and(|x| x.eq_ignore_ascii_case("exe")) && !is_uninstaller(p))
+        .collect();
+    let stem = |p: &PathBuf| crate::discover::normalize(&p.file_stem().unwrap_or_default().to_string_lossy());
+    exes.iter().find(|p| wanted.contains(&stem(p))).cloned().or_else(|| (exes.len() == 1).then(|| exes[0].clone()))
+}
+
+/// "C:\…\App.exe",0  ->  C:\…\App.exe
+fn icon_path(value: &str) -> Option<PathBuf> {
+    let text = value.trim();
+    let text = match text.rsplit_once(',') {
+        Some((path, index)) if index.trim().trim_start_matches('-').chars().all(|c| c.is_ascii_digit()) => path,
+        _ => text,
+    };
+    let path = text.trim().trim_matches('"');
+    path.to_ascii_lowercase().ends_with(".exe").then(|| PathBuf::from(path))
+}
+
+fn is_uninstaller(path: &Path) -> bool {
+    let name = path.file_name().map(|n| n.to_string_lossy().to_ascii_lowercase()).unwrap_or_default();
+    name.starts_with("unins") || name.starts_with("uninstall")
 }
 
 /// exe'nin ürün sürümü (sürüm kaynağından). Yoksa ya da 0.0.0.0 ise None.
@@ -265,8 +404,40 @@ pub fn is_running(info: &InstallInfo) -> bool {
 
 // ---- algılama --------------------------------------------------------------------------------------------------------
 
+/// Kendiliğinden bulunan uygulamalarda kayıtta aranan adlar: uygulamanın adı ve depo adı ("robzdpi").
+pub fn wanted_names(def: &AppDef) -> Vec<String> {
+    let slug = def.repo.rsplit('/').next().unwrap_or_default();
+    let mut names = vec![crate::discover::normalize(&def.name), crate::discover::normalize(slug)];
+    names.dedup();
+    names
+}
+
+fn detect_by_name(def: &AppDef) -> InstallInfo {
+    let wanted = wanted_names(def);
+    for entry in registry_search(&wanted) {
+        let Some(location) = entry.location.as_deref() else { continue };
+        let dir = PathBuf::from(location.trim().trim_matches('"'));
+        let Some(exe) = resolve_exe(&dir, &entry, &wanted) else { continue };
+        let hint = entry.uninstall.as_deref().and_then(uninstaller_from_string);
+        let uninstaller = hint.filter(|h| is_file(h) && is_inside(h, &dir));
+        return InstallInfo {
+            installed: true,
+            version: entry.version.as_deref().and_then(version::clean).or_else(|| file_version(&exe)),
+            uninstaller: uninstaller.map(|p| p.display().to_string()),
+            dir: Some(dir.display().to_string()),
+            exe_path: Some(exe.display().to_string()),
+            scope: Some(entry.scope),
+            source: Some("registry"),
+        };
+    }
+    InstallInfo::default()
+}
+
 pub fn detect(def: &AppDef) -> InstallInfo {
     let win = &def.windows;
+    if win.installer == InstallerType::Auto {
+        return detect_by_name(def);
+    }
     for entry in registry_entries(&win.uninstall_key) {
         let Some(location) = entry.location else { continue };
         let dir = PathBuf::from(location.trim().trim_matches('"'));
@@ -356,7 +527,11 @@ fn spawn_error(code: &str, error: std::io::Error) -> HubError {
 
 /// İndirilen kurulum dosyasını sessiz kipte çalıştırır; bitene kadar bekler.
 pub async fn run_installer(def: &AppDef, file: &Path) -> HubResult<()> {
-    let code = run_and_wait(file, install_args(def.windows.installer), Duration::from_secs(15 * 60))
+    let kind = match def.windows.installer {
+        InstallerType::Auto => sniff_installer(file).unwrap_or(InstallerType::Auto),
+        kind => kind,
+    };
+    let code = run_and_wait(file, install_args(kind), Duration::from_secs(15 * 60))
         .await
         .map_err(|e| spawn_error("installer-failed", e))?;
     match code {
@@ -375,7 +550,11 @@ pub async fn run_uninstaller(def: &AppDef, info: &InstallInfo) -> HubResult<()> 
     if !is_file(uninstaller) || !is_inside(uninstaller, dir) {
         return Err(HubError::new("uninstaller-missing"));
     }
-    run_and_wait(uninstaller, uninstall_args(def.windows.installer), Duration::from_secs(5 * 60))
+    let kind = match def.windows.installer {
+        InstallerType::Auto => uninstaller_kind(uninstaller),
+        kind => kind,
+    };
+    run_and_wait(uninstaller, uninstall_args(kind), Duration::from_secs(5 * 60))
         .await
         .map_err(|e| spawn_error("uninstall-failed", e))?;
     for _ in 0..120 {
@@ -447,5 +626,45 @@ mod tests {
         assert_eq!(expand_dir(r"%WINDIR%\System32"), None);
         assert_eq!(expand_dir(r"%LOCALAPPDATA%\..\Roaming"), None);
         assert_eq!(expand_dir(r"C:\Windows"), None);
+    }
+
+    #[test]
+    fn matches_installed_names_loosely() {
+        let wanted = vec!["robzdpi".to_string(), "robzvision".to_string()];
+        assert!(name_matches("Robz DPI", &wanted));
+        assert!(name_matches("RobzDPI", &wanted));
+        assert!(name_matches("Robz Vision version 1.6.0", &wanted));
+        assert!(name_matches("Robz Vision 1.6.0", &wanted));
+        assert!(!name_matches("Robz DPI Helper", &wanted));
+        assert!(!name_matches("Robz", &wanted));
+        assert!(!name_matches("Robz Vision", &[String::new()]));
+    }
+
+    #[test]
+    fn reads_exe_from_display_icon() {
+        assert_eq!(icon_path(r#""C:\Apps\Robz DPI\RobzDPI.exe",0"#), Some(PathBuf::from(r"C:\Apps\Robz DPI\RobzDPI.exe")));
+        assert_eq!(icon_path(r"C:\Apps\X\X.exe"), Some(PathBuf::from(r"C:\Apps\X\X.exe")));
+        assert_eq!(icon_path(r"C:\Apps\X\icon.ico,0"), None);
+        assert_eq!(uninstaller_kind(Path::new(r"C:\Apps\X\unins000.exe")), InstallerType::Inno);
+        assert_eq!(uninstaller_kind(Path::new(r"C:\Apps\X\uninstall.exe")), InstallerType::Nsis);
+    }
+
+    #[test]
+    fn sniffs_installer_type() {
+        let dir = std::env::temp_dir().join(format!("robzhub-sniff-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let write = |name: &str, marker: &[u8]| {
+            // İmza 1 MB'lık okuma parçasının sınırına denk gelsin: bölünmüş imza da bulunmalı.
+            let mut bytes = vec![0u8; 1024 * 1024 - 5];
+            bytes.extend_from_slice(marker);
+            bytes.extend_from_slice(&[0u8; 64]);
+            let path = dir.join(name);
+            std::fs::write(&path, bytes).unwrap();
+            path
+        };
+        assert_eq!(sniff_installer(&write("inno.exe", b"Inno Setup Setup Data (6.4.0)")), Some(InstallerType::Inno));
+        assert_eq!(sniff_installer(&write("nsis.exe", b"\xEF\xBE\xAD\xDENullsoftInst")), Some(InstallerType::Nsis));
+        assert_eq!(sniff_installer(&write("other.exe", b"MZ nothing here")), None);
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }
