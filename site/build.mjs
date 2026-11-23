@@ -18,6 +18,7 @@ const REPO_URL = `https://github.com/${REPO}`;
 // Sürümdeki dosyalar: her birinin tek, sabit adı var (release.yml). Site ziyaretçinin sistemine göre birini öne çıkarır.
 const FILES = {
   windows: 'RobzHub-Setup.exe',
+  portable: 'RobzHub-Portable.exe',
   deb: 'RobzHub-Linux-amd64.deb',
   rpm: 'RobzHub-Linux-x86_64.rpm',
   appimage: 'RobzHub-Linux-amd64.AppImage',
@@ -241,8 +242,8 @@ function downloadButtons(t, { big = false } = {}) {
       <a class="btn btn-star ${big ? 'btn-xl' : 'btn-lg'}" href="${REPO_URL}" title="${esc(t.starTitle)}">
         ${icon('star', 18)}<span>${esc(t.star)}</span><span class="btn-count" data-stars ${live.stars == null ? 'hidden' : ''}>${live.stars ?? ''}</span>
       </a>
-      <p class="cta-linux" data-other-formats>${esc(t.linux)} ${[link('deb', '.deb'), link('rpm', '.rpm'), link('appimage', 'AppImage')].join(dot)}</p>
-      <p class="cta-linux" data-other-formats-linux hidden>${esc(t.otherFormats)} ${[link('deb', t.debLabel), link('rpm', t.rpmLabel), link('appimage', t.appimageLabel), link('windows', 'Windows')].join(dot)}</p>
+      <p class="cta-linux" data-other-formats>${link('portable', t.portableLabel)}<span aria-hidden="true"> · </span>${esc(t.linux)} ${[link('deb', '.deb'), link('rpm', '.rpm'), link('appimage', 'AppImage')].join(dot)}</p>
+      <p class="cta-linux" data-other-formats-linux hidden>${esc(t.otherFormats)} ${[link('deb', t.debLabel), link('rpm', t.rpmLabel), link('appimage', t.appimageLabel), link('windows', 'Windows'), link('portable', t.portableLabel)].join(dot)}</p>
     </div>`;
 }
 

@@ -17,6 +17,7 @@
 
 <p align="center">
   <a href="https://github.com/kutsalkiremitci/robz-hub/releases/latest/download/RobzHub-Setup.exe"><img src="https://img.shields.io/badge/%C3%9CCRETS%C4%B0Z%20%C4%B0ND%C4%B0R-WINDOWS%2010%20%C2%B7%2011-bd561d?style=for-the-badge&amp;logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjRkZGRkZGIiBzdHJva2Utd2lkdGg9IjIuNiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJNMTIgM3YxMiIvPjxwYXRoIGQ9Im02LjUgOS41IDUuNSA1LjUgNS41LTUuNSIvPjxwYXRoIGQ9Ik00IDIwLjVoMTYiLz48L3N2Zz4%3D&amp;labelColor=8f3f11" alt="Ücretsiz indir: RobzHub-Setup.exe, Windows 10 ve 11"></a>
+  <a href="https://github.com/kutsalkiremitci/robz-hub/releases/latest/download/RobzHub-Portable.exe"><img src="https://img.shields.io/badge/WINDOWS-TA%C5%9EINAB%C4%B0L%C4%B0R-21262d?style=for-the-badge&amp;logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjRkZGRkZGIiBzdHJva2Utd2lkdGg9IjIuNiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJNMTIgM3YxMiIvPjxwYXRoIGQ9Im02LjUgOS41IDUuNSA1LjUgNS41LTUuNSIvPjxwYXRoIGQ9Ik00IDIwLjVoMTYiLz48L3N2Zz4%3D" alt="Taşınabilir Windows sürümü: RobzHub-Portable.exe"></a>
   <a href="https://github.com/kutsalkiremitci/robz-hub/releases/latest/download/RobzHub-Linux-amd64.deb"><img src="https://img.shields.io/badge/LINUX-.DEB-21262d?style=for-the-badge&amp;logo=linux&amp;logoColor=white" alt="Linux için indir: .deb"></a>
   <a href="https://github.com/kutsalkiremitci/robz-hub/releases/latest/download/RobzHub-Linux-x86_64.rpm"><img src="https://img.shields.io/badge/LINUX-.RPM-21262d?style=for-the-badge&amp;logo=linux&amp;logoColor=white" alt="Linux için indir: .rpm"></a>
   <a href="https://github.com/kutsalkiremitci/robz-hub/releases/latest/download/RobzHub-Linux-amd64.AppImage"><img src="https://img.shields.io/badge/LINUX-APPIMAGE-21262d?style=for-the-badge&amp;logo=linux&amp;logoColor=white" alt="Linux için indir: AppImage"></a>
@@ -140,6 +141,11 @@ kendiliğinden kullanır; katalog değişmez.
    Windows **"Windows kişisel bilgisayarınızı korudu"** uyarısı gösterirse **Ek bilgi** › **Yine de çalıştır**'a bas
    (dosya henüz dijital olarak imzalı değil; Robz Hub'ın kurduğu uygulamalarda bu uyarı çıkmaz).
 3. **Uygulamaları kur:** Robz Hub açılınca ana sayfadaki **İkisini de kur**'a bas. Bittiğinde **İkisini de başlat**.
+
+**Kurmak istemiyorsan:** [RobzHub-Portable.exe](https://github.com/kutsalkiremitci/robz-hub/releases/latest/download/RobzHub-Portable.exe) taşınabilir sürümdür. Kurulmaz, çift
+tıklayınca açılır; ayarlar, önbellek ve indirmeler exe'nin yanındaki `RobzHub-Data` klasöründe durur, bilgisayarda iz
+kalmaz. USB bellekte taşıyabilirsin. Kendini de günceller (exe yenisiyle değişir). Arayüz için Windows'taki WebView2
+kullanılır; Windows 11'de hazır gelir, Windows 10'da çoğu bilgisayarda Edge ile birlikte kuruludur.
 
 ### Linux'ta
 
@@ -423,9 +429,9 @@ site/                web sitesi (catalog.json'dan üretilir)
 ```
 
 **Sürüm yayınlamak:** sürüm numarasını `package.json`, `src-tauri/Cargo.toml` ve `src-tauri/tauri.conf.json`'da aynı
-yap, [`CHANGELOG.md`](CHANGELOG.md)'ye notları yaz ve `vX.Y.Z` etiketini gönder. İş akışı dört dosyayı derleyip tek
-sürümde yayınlar: `RobzHub-Setup.exe` (Windows), `RobzHub-Linux-amd64.deb`, `RobzHub-Linux-x86_64.rpm` ve
-`RobzHub-Linux-amd64.AppImage`, yanında `SHA256SUMS.txt`. Her dosyanın tek, sabit adı vardır: README ve sitedeki
+yap, [`CHANGELOG.md`](CHANGELOG.md)'ye notları yaz ve `vX.Y.Z` etiketini gönder. İş akışı beş dosyayı derleyip tek
+sürümde yayınlar: `RobzHub-Setup.exe` (Windows kurulumu), `RobzHub-Portable.exe` (Windows taşınabilir),
+`RobzHub-Linux-amd64.deb`, `RobzHub-Linux-x86_64.rpm` ve `RobzHub-Linux-amd64.AppImage`, yanında `SHA256SUMS.txt`. Her dosyanın tek, sabit adı vardır: README ve sitedeki
 bağlantılar hep en son sürümü verir, çalışan Robz Hub'lar da kendilerini aynı dosyalardan günceller.
 
 ## Destek ve katkı

@@ -97,7 +97,12 @@ pub fn show_window(app: &AppHandle) {
 }
 
 pub fn create_window(app: &AppHandle) -> tauri::Result<()> {
-    let window = WebviewWindowBuilder::new(app, WINDOW, WebviewUrl::App("index.html".into()))
+    let mut builder = WebviewWindowBuilder::new(app, WINDOW, WebviewUrl::App("index.html".into()));
+    // Taşınabilir sürümde WebView2'nin verisi de exe'nin yanında durur; bilgisayarda iz kalmaz.
+    if let Some(dir) = crate::platform::portable_dir() {
+        builder = builder.data_directory(dir);
+    }
+    let window = builder
         .title("Robz Hub")
         .inner_size(1240.0, 800.0)
         .min_inner_size(980.0, 640.0)

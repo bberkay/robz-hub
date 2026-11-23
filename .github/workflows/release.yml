@@ -6,7 +6,7 @@
 #
 # Her dosyanın tek, sabit adı vardır; README ve web sitesindeki ".../releases/latest/download/…" bağlantıları hep en
 # son sürümü verir, Robz Hub da kendi güncellemesini aynı dosyalardan alır (catalog.json -> hub.asset ve hub.linux):
-#   Windows  RobzHub-Setup.exe
+#   Windows  RobzHub-Setup.exe (kurulum), RobzHub-Portable.exe (taşınabilir: kurulmaz, verileri yanında tutar)
 #   Linux    RobzHub-Linux-amd64.deb (Debian, Ubuntu), RobzHub-Linux-x86_64.rpm (Fedora, openSUSE),
 #            RobzHub-Linux-amd64.AppImage (diğer bütün dağıtımlar)
 # Dosya adlarını değiştirme. GitHub her dosyanın SHA-256 özetini API'de verir; Robz Hub indirdiğini onunla doğrular.
@@ -66,6 +66,8 @@ jobs:
           New-Item -ItemType Directory -Force out | Out-Null
           $setup = Get-ChildItem src-tauri/target/release/bundle/nsis/*-setup.exe | Select-Object -First 1
           Copy-Item $setup.FullName out/RobzHub-Setup.exe
+          # Taşınabilir sürüm: kurulum programının içindeki exe'nin kendisi; adı ona taşınabilir kipte açılmasını söyler.
+          Copy-Item src-tauri/target/release/RobzHub.exe out/RobzHub-Portable.exe
       - uses: actions/upload-artifact@v4
         with:
           name: windows

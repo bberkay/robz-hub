@@ -134,6 +134,22 @@ pub fn linux_format() -> Option<LinuxFormat> {
     }
 }
 
+/// Taşınabilir kipte verilerin klasörü (exe'nin yanında "RobzHub-Data"). Yalnız Windows'ta: exe'nin adında "portable"
+/// geçiyorsa (RobzHub-Portable.exe) ya da yanında "portable" adlı bir dosya varsa. Kurulu sürümde None.
+pub fn portable_dir() -> Option<std::path::PathBuf> {
+    if !cfg!(windows) {
+        return None;
+    }
+    let exe = std::env::current_exe().ok()?;
+    portable_dir_for(&exe, |p| p.exists())
+}
+
+pub fn portable_dir_for(exe: &std::path::Path, exists: impl Fn(&std::path::Path) -> bool) -> Option<std::path::PathBuf> {
+    let dir = exe.parent()?;
+    let named = exe.file_stem().is_some_and(|s| s.to_string_lossy().to_ascii_lowercase().contains("portable"));
+    (named || exists(&dir.join("portable"))).then(|| dir.join("RobzHub-Data"))
+}
+
 /// Robz Hub bir AppImage olarak mı çalışıyor (AppImage çalışırken APPIMAGE değişkenine kendi yolunu yazar).
 pub fn appimage_path() -> Option<std::path::PathBuf> {
     if cfg!(target_os = "linux") {
@@ -198,9 +214,11 @@ pub fn plan_for<'a>(
     }
 }
 
-/// Robz Hub'ın kendi güncellemesinin dosyası: Windows'ta kurulum programı, Linux'ta AppImage ya da sistem paketi.
+/// Robz Hub'ın kendi güncellemesinin dosyası: Windows'ta kurulum programı (taşınabilirde RobzHub-Portable.exe),
+/// Linux'ta AppImage ya da sistem paketi.
 pub fn hub_asset(hub: &HubConf) -> Option<&Regex> {
     match OS {
+        "windows" if portable_dir().is_some() => hub.portable.as_ref(),
         "windows" => Some(&hub.asset_re),
         "linux" if appimage_path().is_some() => hub.linux.appimage.as_ref(),
         "linux" => match linux_format()? {
@@ -215,6 +233,20 @@ pub fn hub_asset(hub: &HubConf) -> Option<&Regex> {
 mod tests {
     use super::*;
     use crate::catalog;
+
+    #[test]
+    fn detects_the_portable_build() {
+        use std::path::{Path, PathBuf};
+        let no_marker = |_: &Path| false;
+        assert_eq!(
+            portable_dir_for(Path::new(r"D:\Araçlar\RobzHub-Portable.exe"), no_marker),
+            Some(PathBuf::from(r"D:\Araçlar\RobzHub-Data"))
+        );
+        assert_eq!(portable_dir_for(Path::new(r"C:\Users\a\AppData\Local\Robz Hub\RobzHub.exe"), no_marker), None);
+        // Adı değiştirilse de yanındaki "portable" dosyası taşınabilir kipte tutar.
+        let marker = |p: &Path| p.ends_with("portable");
+        assert!(portable_dir_for(Path::new(r"E:\RobzHub.exe"), marker).is_some());
+    }
 
     #[test]
     fn reads_the_distribution_family() {

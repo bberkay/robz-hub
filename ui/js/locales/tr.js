@@ -172,6 +172,8 @@ export default {
   'settings.language.desc': 'Robz Hub arayüzünün dili. Uygulamaların kendi dil ayarı ayrıdır.',
   'settings.language.auto': 'Windows dili',
   'settings.language.auto.linux': 'Sistem dili',
+  'settings.portable': 'Taşınabilir',
+  'settings.portable.body': 'Ayarlar, önbellek ve indirmeler exe dosyasının yanındaki klasörde durur: {dir}',
   'settings.startup': 'Başlangıç ve pencere',
   'settings.launchAtLogin': 'Windows açılışında başlat',
   'settings.launchAtLogin.linux': 'Oturum açılınca başlat',

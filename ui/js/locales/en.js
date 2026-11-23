@@ -172,6 +172,8 @@ export default {
   'settings.language.desc': 'The language of Robz Hub itself. Each app has its own language setting.',
   'settings.language.auto': 'Windows language',
   'settings.language.auto.linux': 'System language',
+  'settings.portable': 'Portable',
+  'settings.portable.body': 'Settings, cache and downloads live in the folder next to the exe: {dir}',
   'settings.startup': 'Startup and window',
   'settings.launchAtLogin': 'Start with Windows',
   'settings.launchAtLogin.linux': 'Start when I log in',

@@ -170,6 +170,9 @@ pub struct HubConf {
     /// Robz Hub'ın Linux paketleri (kendi güncellemesi için).
     #[serde(skip)]
     pub linux: HubLinuxConf,
+    /// Taşınabilir Windows sürümü (RobzHub-Portable.exe); taşınabilir Robz Hub kendini bununla günceller.
+    #[serde(skip)]
+    pub portable: Option<Regex>,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -466,7 +469,8 @@ pub fn parse(raw: &Value) -> Option<Catalog> {
             rpm: pattern(&linux["rpm"]).map(|(_, r)| r),
             appimage: pattern(&linux["appimage"]).map(|(_, r)| r),
         };
-        Some(HubConf { repo, asset, asset_re, linux })
+        let portable = pattern(&raw["hub"]["portable"]).map(|(_, r)| r);
+        Some(HubConf { repo, asset, asset_re, linux, portable })
     })();
 
     Some(Catalog {
@@ -555,6 +559,10 @@ mod tests {
         // Sürümlerde artık her dosyanın tek (sabit) adı var; eski sürümlerin numaralı adları da eşleşir.
         assert!(hub.asset_re.is_match("RobzHub-Setup.exe") && hub.asset_re.is_match("RobzHub-Setup-0.1.6.exe"));
         assert!(!hub.asset_re.is_match("RobzHub-Setup.exe.sig"));
+        // Kurulum programı ile taşınabilir sürüm birbirine karışmaz.
+        assert!(!hub.asset_re.is_match("RobzHub-Portable.exe"));
+        let portable = hub.portable.as_ref().unwrap();
+        assert!(portable.is_match("RobzHub-Portable.exe") && !portable.is_match("RobzHub-Setup.exe"));
         let deb = hub.linux.deb.as_ref().unwrap();
         assert!(deb.is_match("RobzHub-Linux-amd64.deb") && deb.is_match("RobzHub-0.1.6-amd64.deb"));
         assert!(hub.linux.rpm.as_ref().unwrap().is_match("RobzHub-Linux-x86_64.rpm"));

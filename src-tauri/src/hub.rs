@@ -319,6 +319,7 @@ impl Hub {
             "platform": platform::OS,
             "linuxFormat": platform::linux_format(),
             "appImage": platform::appimage_path().is_some(),
+            "portable": platform::portable_dir().map(|d| d.display().to_string()),
             "packaged": !cfg!(debug_assertions),
             "systemLanguage": self.system_language,
             "catalog": inner.catalog,

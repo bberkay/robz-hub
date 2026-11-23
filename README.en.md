@@ -17,6 +17,7 @@
 
 <p align="center">
   <a href="https://github.com/kutsalkiremitci/robz-hub/releases/latest/download/RobzHub-Setup.exe"><img src="https://img.shields.io/badge/FREE%20DOWNLOAD-WINDOWS%2010%20%C2%B7%2011-bd561d?style=for-the-badge&amp;logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjRkZGRkZGIiBzdHJva2Utd2lkdGg9IjIuNiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJNMTIgM3YxMiIvPjxwYXRoIGQ9Im02LjUgOS41IDUuNSA1LjUgNS41LTUuNSIvPjxwYXRoIGQ9Ik00IDIwLjVoMTYiLz48L3N2Zz4%3D&amp;labelColor=8f3f11" alt="Free download: RobzHub-Setup.exe, Windows 10 and 11"></a>
+  <a href="https://github.com/kutsalkiremitci/robz-hub/releases/latest/download/RobzHub-Portable.exe"><img src="https://img.shields.io/badge/WINDOWS-PORTABLE-21262d?style=for-the-badge&amp;logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjRkZGRkZGIiBzdHJva2Utd2lkdGg9IjIuNiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJNMTIgM3YxMiIvPjxwYXRoIGQ9Im02LjUgOS41IDUuNSA1LjUgNS41LTUuNSIvPjxwYXRoIGQ9Ik00IDIwLjVoMTYiLz48L3N2Zz4%3D" alt="Portable Windows version: RobzHub-Portable.exe"></a>
   <a href="https://github.com/kutsalkiremitci/robz-hub/releases/latest/download/RobzHub-Linux-amd64.deb"><img src="https://img.shields.io/badge/LINUX-.DEB-21262d?style=for-the-badge&amp;logo=linux&amp;logoColor=white" alt="Download for Linux: .deb"></a>
   <a href="https://github.com/kutsalkiremitci/robz-hub/releases/latest/download/RobzHub-Linux-x86_64.rpm"><img src="https://img.shields.io/badge/LINUX-.RPM-21262d?style=for-the-badge&amp;logo=linux&amp;logoColor=white" alt="Download for Linux: .rpm"></a>
   <a href="https://github.com/kutsalkiremitci/robz-hub/releases/latest/download/RobzHub-Linux-amd64.AppImage"><img src="https://img.shields.io/badge/LINUX-APPIMAGE-21262d?style=for-the-badge&amp;logo=linux&amp;logoColor=white" alt="Download for Linux: AppImage"></a>
@@ -141,6 +142,11 @@ check; the catalog doesn't change.
    shows **"Windows protected your PC"**, choose **More info** › **Run anyway** (the file isn't digitally signed yet;
    apps that Robz Hub installs don't show this warning).
 3. **Install the apps:** in Robz Hub, press **Install both** on the home page. When it's done, **Launch both**.
+
+**Rather not install it?** [RobzHub-Portable.exe](https://github.com/kutsalkiremitci/robz-hub/releases/latest/download/RobzHub-Portable.exe) is the portable version. Nothing to
+install, just double-click it; settings, cache and downloads stay in the `RobzHub-Data` folder next to the exe and
+nothing is left on the PC. Carry it on a USB stick. It updates itself too (the exe is replaced). The interface uses
+Windows' WebView2, which ships with Windows 11 and is already on most Windows 10 PCs through Edge.
 
 ### On Linux
 
@@ -423,9 +429,9 @@ site/                website (generated from catalog.json)
 ```
 
 **Releasing:** set the same version in `package.json`, `src-tauri/Cargo.toml` and `src-tauri/tauri.conf.json`, add
-notes to [`CHANGELOG.md`](CHANGELOG.md) and push a `vX.Y.Z` tag. The workflow builds four files and publishes them in
-one release: `RobzHub-Setup.exe` (Windows), `RobzHub-Linux-amd64.deb`, `RobzHub-Linux-x86_64.rpm` and
-`RobzHub-Linux-amd64.AppImage`, plus `SHA256SUMS.txt`. Each file has a single fixed name: links in the README and
+notes to [`CHANGELOG.md`](CHANGELOG.md) and push a `vX.Y.Z` tag. The workflow builds five files and publishes them in
+one release: `RobzHub-Setup.exe` (Windows installer), `RobzHub-Portable.exe` (Windows portable),
+`RobzHub-Linux-amd64.deb`, `RobzHub-Linux-x86_64.rpm` and `RobzHub-Linux-amd64.AppImage`, plus `SHA256SUMS.txt`. Each file has a single fixed name: links in the README and
 on the site always give the latest version, and running Robz Hubs update themselves from the same files.
 
 ## Support and contributing

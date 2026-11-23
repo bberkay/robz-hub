@@ -6,6 +6,9 @@
 //!   ROBZHUB_DRY_RUN=1   kurulum/kaldırma programları çalıştırılmaz (indirme ve doğrulama gerçek); arayüz akışını
 //!                       bilgisayara dokunmadan denemek için
 //!   ROBZHUB_DATA_DIR    ayarlar, önbellek ve indirmeler için ayrı bir klasör
+//!
+//! Taşınabilir sürüm (RobzHub-Portable.exe): kurulmaz; bütün verileri exe'nin yanındaki RobzHub-Data klasöründe tutar
+//! (platform::portable_dir).
 
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
@@ -51,12 +54,44 @@ fn open_external(app: &AppHandle, url: &str) -> HubResult<()> {
 fn run_self_update(setup: &Path) -> std::io::Result<()> {
     use std::os::windows::process::CommandExt;
     let exe = std::env::current_exe()?;
+    if platform::portable_dir().is_some() {
+        return replace_portable(&exe, setup);
+    }
     let script = format!(
         "/d /s /c \"ping -n 3 127.0.0.1 >nul & \"{}\" /S & start \"\" \"{}\"\"",
         setup.display(),
         exe.display()
     );
     std::process::Command::new("cmd.exe").raw_arg(script).creation_flags(0x0800_0000).spawn().map(drop)
+}
+
+/// Taşınabilir sürümün güncellemesi: çalışan exe yeniden adlandırılır (Windows buna izin verir, silmeye vermez), yeni exe
+/// aynı adla yerine konur ve bu süreç kapandıktan sonra açılır. Eski exe bir sonraki açılışta silinir.
+#[cfg(windows)]
+fn replace_portable(exe: &Path, new_exe: &Path) -> std::io::Result<()> {
+    use std::os::windows::process::CommandExt;
+    swap_exe(exe, new_exe)?;
+    let script = format!("/d /s /c \"ping -n 3 127.0.0.1 >nul & start \"\" \"{}\"\"", exe.display());
+    std::process::Command::new("cmd.exe").raw_arg(script).creation_flags(0x0800_0000).spawn().map(drop)
+}
+
+#[cfg_attr(not(windows), allow(dead_code))]
+/// exe'yi new_exe ile değiştirir; eskisi "<ad>.exe.old" olarak kalır. Kopyalama başarısız olursa eskisi geri konur.
+fn swap_exe(exe: &Path, new_exe: &Path) -> std::io::Result<()> {
+    let old = old_exe(exe);
+    let _ = std::fs::remove_file(&old);
+    std::fs::rename(exe, &old)?;
+    if let Err(error) = std::fs::copy(new_exe, exe) {
+        let _ = std::fs::rename(&old, exe);
+        return Err(error);
+    }
+    Ok(())
+}
+
+fn old_exe(exe: &Path) -> PathBuf {
+    let mut name = exe.file_name().unwrap_or_default().to_os_string();
+    name.push(".old");
+    exe.with_file_name(name)
 }
 
 /// Linux: AppImage ise dosya yenisiyle değiştirilir; .deb/.rpm ise paket yöneticisi yeni paketi kurar (pkexec parola
@@ -144,10 +179,18 @@ fn main() {
         .plugin(tauri_plugin_autostart::init(tauri_plugin_autostart::MacosLauncher::LaunchAgent, Some(vec!["--hidden"])))
         .invoke_handler(tauri::generate_handler![hub_call])
         .setup(move |app| {
-            let data_dir = match std::env::var_os("ROBZHUB_DATA_DIR") {
-                Some(dir) => PathBuf::from(dir),
-                None => app.path().app_local_data_dir()?,
+            let portable = platform::portable_dir();
+            let data_dir = match (std::env::var_os("ROBZHUB_DATA_DIR"), &portable) {
+                (Some(dir), _) => PathBuf::from(dir),
+                (None, Some(dir)) => dir.clone(),
+                (None, None) => app.path().app_local_data_dir()?,
             };
+            // Taşınabilir sürüm kendini güncellediyse eski exe artık silinebilir.
+            if portable.is_some() {
+                if let Ok(exe) = std::env::current_exe() {
+                    let _ = std::fs::remove_file(old_exe(&exe));
+                }
+            }
             let (hub, jobs) = Hub::new(app.handle().clone(), data_dir, dry_run)?;
             app.manage(hub.clone());
             hub.refresh_installs();
@@ -167,4 +210,25 @@ fn main() {
         })
         .run(tauri::generate_context!())
         .expect("Robz Hub başlatılamadı");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn swaps_the_portable_exe() {
+        let dir = std::env::temp_dir().join(format!("robzhub-swap-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let (exe, new_exe) = (dir.join("RobzHub-Portable.exe"), dir.join("indirilen.exe"));
+        std::fs::write(&exe, b"0.1.7").unwrap();
+        std::fs::write(&new_exe, b"0.1.8").unwrap();
+        swap_exe(&exe, &new_exe).unwrap();
+        assert_eq!(std::fs::read(&exe).unwrap(), b"0.1.8");
+        assert_eq!(std::fs::read(dir.join("RobzHub-Portable.exe.old")).unwrap(), b"0.1.7");
+        // Yeni dosya yoksa eski exe yerinde kalır.
+        assert!(swap_exe(&exe, &dir.join("yok.exe")).is_err());
+        assert_eq!(std::fs::read(&exe).unwrap(), b"0.1.8");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
 }

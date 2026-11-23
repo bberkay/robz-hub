@@ -102,7 +102,8 @@ export function Settings() {
       <div class="box about-box">
         <img class="app-icon" src="/assets/hub/icon.png" width="56" height="56" alt="" />
         <div>
-          <div class="about-name">Robz Hub <span class="mono muted">${data.hubVersion}</span></div>
+          <div class="about-name">Robz Hub <span class="mono muted">${data.hubVersion}</span>${data.portable && html` <span class="label">${t('settings.portable')}</span>`}</div>
+          ${data.portable && html`<p class="muted">${t('settings.portable.body', { dir: data.portable })}</p>`}
           <p>${t('settings.about.body')}</p>
           <p class="muted">${t('settings.about.disclaimer')}</p>
           <ul class="about-links">

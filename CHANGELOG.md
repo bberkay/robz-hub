@@ -3,6 +3,21 @@
 Her sürümün notları burada `## X.Y.Z` başlığı altında durur; sürüm iş akışı (.github/workflows/release.yml) GitHub
 sürüm notunu bu bölümden alır.
 
+## 0.1.8
+
+<!-- tr -->
+- **Taşınabilir Windows sürümü.** RobzHub-Portable.exe kurulmadan çalışır: ayarlar, önbellek ve indirmeler exe'nin yanındaki RobzHub-Data klasöründe durur, bilgisayarda iz kalmaz. USB bellekte taşınabilir ve kendini de günceller. Ayarlar sayfasında "Taşınabilir" etiketi ve verilerin yeri görünür.
+- Web sitesinde Windows ziyaretçilerine taşınabilir sürümün bağlantısı da gösterilir.
+
+<!-- en -->
+<details><summary>English</summary>
+
+- **Portable Windows version.** RobzHub-Portable.exe runs without installing: settings, cache and downloads stay in the RobzHub-Data folder next to the exe and nothing is left on the PC. Carry it on a USB stick; it updates itself too. The Settings page shows a "Portable" label and where the data lives.
+- The website also shows Windows visitors a link to the portable version.
+
+</details>
+<!-- end -->
+
 ## 0.1.7
 
 <!-- tr -->

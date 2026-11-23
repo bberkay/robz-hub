@@ -1,9 +1,10 @@
 {
   "schema": 1,
-  "revision": 5,
+  "revision": 6,
   "hub": {
     "repo": "kutsalkiremitci/robz-hub",
     "asset": "^RobzHub-Setup(-[0-9.]+)?\\.exe$",
+    "portable": "^RobzHub-Portable\\.exe$",
     "linux": {
       "deb": "^RobzHub-(Linux|[0-9.]+)-amd64\\.deb$",
       "rpm": "^RobzHub-(Linux|[0-9.]+)-x86_64\\.rpm$",
