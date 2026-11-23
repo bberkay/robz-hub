@@ -234,6 +234,8 @@ mod tests {
     use super::*;
     use crate::catalog;
 
+    // Taşınabilir kip yalnız Windows'ta (yollar Windows kurallarıyla)
+    #[cfg(windows)]
     #[test]
     fn detects_the_portable_build() {
         use std::path::{Path, PathBuf};
