@@ -84,9 +84,13 @@ function HubUpdate() {
         </div>
       </div>
       ${!busy &&
-      html`<button class="btn btn-primary" onClick=${() => actions.run('updateSelf')}>
-        <${Icon} name="download" />${t('updates.hub.action')}
-      </button>`}
+      (data.self.installable
+        ? html`<button class="btn btn-primary" onClick=${() => actions.run('updateSelf')}>
+            <${Icon} name="download" />${t('updates.hub.action')}
+          </button>`
+        : html`<button class="btn btn-primary" onClick=${() => actions.openExternal(data.self.url)}>
+            <${Icon} name="external" />${t('updates.hub.download')}
+          </button>`)}
     </header>
     ${busy && html`<${JobProgress} def=${def} job=${job} />`}
     ${job?.phase === 'error' && html`<${JobError} def=${def} job=${job} />`}

@@ -28,6 +28,7 @@ function ToggleRow({ name, title, desc, disabled = false }) {
 
 export function Settings() {
   const { data } = useStore();
+  const linux = data.platform === 'linux';
   const { settings } = data;
   const links = data.catalog.links;
   const busy = Object.values(data.jobs).some((job) => job.phase !== 'error');
@@ -51,7 +52,7 @@ export function Settings() {
             value=${settings.language}
             onChange=${(value) => set('language', value)}
             options=${[
-              { value: 'auto', label: t('settings.language.auto'), flag: 'auto' },
+              { value: 'auto', label: t(linux ? 'settings.language.auto.linux' : 'settings.language.auto'), flag: 'auto' },
               { value: 'tr', label: t('lang.tr'), flag: 'tr' },
               { value: 'en', label: t('lang.en'), flag: 'en' },
             ]}
@@ -65,7 +66,7 @@ export function Settings() {
       <div class="box">
         <${ToggleRow}
           name="launchAtLogin"
-          title=${t('settings.launchAtLogin')}
+          title=${t(linux ? 'settings.launchAtLogin.linux' : 'settings.launchAtLogin')}
           desc=${data.packaged ? t('settings.launchAtLogin.desc') : t('settings.launchAtLogin.dev')}
           disabled=${!data.packaged}
         />
@@ -77,7 +78,7 @@ export function Settings() {
       <h2 class="section-title">${t('settings.updates')}</h2>
       <div class="box">
         <${ToggleRow} name="autoCheck" title=${t('settings.autoCheck')} desc=${t('settings.autoCheck.desc')} />
-        <${ToggleRow} name="notifyUpdates" title=${t('settings.notifyUpdates')} desc=${t('settings.notifyUpdates.desc')} />
+        <${ToggleRow} name="notifyUpdates" title=${t('settings.notifyUpdates')} desc=${t(linux ? 'settings.notifyUpdates.desc.linux' : 'settings.notifyUpdates.desc')} />
       </div>
     </section>
 

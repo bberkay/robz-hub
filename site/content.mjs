@@ -13,9 +13,10 @@ export default {
     heroLead:
       "Robz Hub, Robz'un açık kaynak uygulamalarını tek tıkla kurar, güncel tutar ve başlatır. GTA VI'yı Robz Play ile 60 FPS oyna, altyazısını Robz Vision ile Türkçe oku: ikisi de buradan.",
     download: 'Windows için indir',
+    linux: 'Linux için:',
     star: 'Yıldız ver',
     starTitle: "GitHub'da yıldız ver",
-    facts: ['Windows 10 ve 11', 'Yönetici izni istemez', 'Rust ile yazıldı', 'Ücretsiz ve açık kaynak'],
+    facts: ['Windows ve Linux', 'Yeni uygulamaları kendisi bulur', 'Rust ile yazıldı', 'Ücretsiz ve açık kaynak'],
     shotAlt:
       'Robz Hub ana sayfası: üstte GTA VI paketi, altında Robz Play ve Robz Vision listesi; Robz Vision için 1.3.2 sürümünden 1.6.0 sürümüne güncelleme.',
 
@@ -121,8 +122,8 @@ export default {
         'Yarım dosya silinir ve hiçbir şey kurulmaz. "Yeniden dene" ile baştan indirilir. İnternet yokken son bilinen sürümler gösterilir.',
       ],
       [
-        'Hangi Windows sürümlerinde çalışır?',
-        "64 bit Windows 10 ve Windows 11. Arayüz için Windows'ta zaten bulunan Microsoft Edge WebView2 kullanılır; yoksa kurulum onu kendisi indirir.",
+        'Hangi sistemlerde çalışır?',
+        "64 bit Windows 10 ve 11 (arayüz Windows'ta zaten bulunan WebView2 ile) ve 64 bit Linux: .deb (Debian, Ubuntu), .rpm (Fedora, openSUSE) ve AppImage. Linux'ta Linux paketi olan uygulamalar kurulur; Robz Play ve Robz Vision yalnız Windows'ta çalışır.",
       ],
     ],
 
@@ -150,9 +151,10 @@ export default {
     heroLead:
       'Robz Hub installs, updates and launches the Robz open-source apps with one click. Play GTA VI at 60 FPS with Robz Play and read its subtitles in Turkish with Robz Vision: both from here.',
     download: 'Download for Windows',
+    linux: 'For Linux:',
     star: 'Star',
     starTitle: 'Star on GitHub',
-    facts: ['Windows 10 and 11', 'No admin rights', 'Built with Rust', 'Free and open source'],
+    facts: ['Windows and Linux', 'Finds new apps on its own', 'Built with Rust', 'Free and open source'],
     shotAlt:
       'Robz Hub home page: the GTA VI bundle on top, Robz Play and Robz Vision below; Robz Vision has an update from 1.3.2 to 1.6.0.',
 
@@ -246,8 +248,8 @@ export default {
       ['Does Robz Hub update itself?', 'Yes. A new Robz Hub version shows at the top of the Updates page; one click downloads and installs it and reopens Robz Hub.'],
       ['What if a download stops halfway?', 'The partial file is deleted and nothing is installed. "Try again" downloads it from the start. Offline, the last known versions are shown.'],
       [
-        'Which Windows versions are supported?',
-        '64-bit Windows 10 and Windows 11. The interface uses Microsoft Edge WebView2, which Windows already has; if missing, the installer fetches it.',
+        'Which systems are supported?',
+        '64-bit Windows 10 and 11 (the interface uses WebView2, which Windows already has) and 64-bit Linux: .deb (Debian, Ubuntu), .rpm (Fedora, openSUSE) and AppImage. On Linux, apps that have a Linux package install; Robz Play and Robz Vision run on Windows only.',
       ],
     ],
 

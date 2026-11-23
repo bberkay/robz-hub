@@ -67,6 +67,13 @@ export function DownloadCount({ n }) {
   </span>`;
 }
 
+// "Linux'ta desteklenmiyor": uygulamanın yalnız Windows sürümü var.
+export function Unsupported({ large = false }) {
+  return html`<span class=${`unsupported ${large ? 'unsupported-lg' : ''}`} title=${t('status.unsupportedTitle')}>
+    <${Icon} name="info" size=${large ? 16 : 14} />${t('status.unsupported')}
+  </span>`;
+}
+
 // GitHub yıldızı: sarı yıldız ve sayı.
 export function StarCount({ n }) {
   if (!n) return null;
@@ -343,6 +350,14 @@ export function AppActions({ def, large = false }) {
   const busy = job && job.phase !== 'error';
 
   if (busy && !large) return html`<div class="actions"><${JobProgress} def=${def} job=${job} compact /></div>`;
+
+  // Bu sistemde kurulamayan uygulama (Linux'ta paketi olmayan): düğme yerine kısa bir not.
+  if (!app.supported && !app.install.installed) {
+    return html`<div class="actions">
+      <${Unsupported} />
+      <${Menu} label=${t('action.more')} items=${appMenuItems(def, app)} />
+    </div>`;
+  }
 
   const buttons = [];
   if (!busy) {

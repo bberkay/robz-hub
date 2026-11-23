@@ -14,7 +14,7 @@ use crate::error::{HubError, HubResult};
 use crate::github::{self, now_ms, Asset, FetchStatus, Release};
 use crate::installs::{self, InstallInfo};
 use crate::settings::Settings;
-use crate::{shell, version};
+use crate::{platform, shell, version};
 use serde::Serialize;
 use serde_json::{json, Value};
 use std::collections::{BTreeMap, HashMap, HashSet};
@@ -51,6 +51,8 @@ pub struct AppState {
     pub downloads: u64,
     /// Deponun GitHub yıldızı (sahibin depo listesinden; henüz okunmadıysa None).
     pub stars: Option<u64>,
+    /// Bu sistemde kurulabilir mi (Linux'ta yalnız paketi olan uygulamalar).
+    pub supported: bool,
 }
 
 #[derive(Debug, Clone, Default, Serialize)]
@@ -83,6 +85,8 @@ pub struct SelfState {
     /// kapalı gösterilir: birkaç sürüm atlayan kullanıcı da neler geldiğini görür.
     pub releases: Vec<Release>,
     pub url: Option<String>,
+    /// Robz Hub kendini bu sistemde güncelleyebilir mi; değilse yeni sürüm sayfası açılır.
+    pub installable: bool,
 }
 
 #[derive(Debug, Clone, Default, Serialize)]
@@ -158,14 +162,23 @@ pub struct Hub {
 }
 
 fn derive(def: &AppDef, app: &mut AppState) {
-    app.latest = github::pick_latest(&app.releases, &def.windows.asset_re).map(|(r, a)| Latest {
+    derive_with(def, app, platform::app_asset(def));
+}
+
+/// `asset`: bu sistemde kurulum dosyasını seçen ifade; None ise uygulama bu sistemde kurulamaz.
+fn derive_with(def: &AppDef, app: &mut AppState, asset: Option<&regex::Regex>) {
+    app.supported = asset.is_some();
+    // Desteklenmeyen sistemde de son sürüm bilgi olarak gösterilir (Windows kurulum dosyasına göre).
+    let asset = asset.unwrap_or(&def.windows.asset_re);
+    app.latest = github::pick_latest(&app.releases, asset).map(|(r, a)| Latest {
         version: r.version.clone(),
         tag: r.tag.clone(),
         published_at: r.published_at.clone(),
         size: a.size,
         verified: a.sha256.is_some(),
     });
-    app.update_available = app.install.installed
+    app.update_available = app.supported
+        && app.install.installed
         && matches!((&app.latest, &app.install.version), (Some(l), Some(v)) if version::compare(&l.version, v).is_gt());
     app.downloads = app.releases.iter().flat_map(|r| &r.assets).map(|a| a.downloads).sum();
 }
@@ -287,6 +300,9 @@ impl Hub {
         json!({
             "hubVersion": self.version,
             "dryRun": self.dry_run,
+            "platform": platform::OS,
+            "linuxFormat": platform::linux_format(),
+            "appImage": platform::appimage_path().is_some(),
             "packaged": !cfg!(debug_assertions),
             "systemLanguage": self.system_language,
             "catalog": inner.catalog,
@@ -346,6 +362,7 @@ impl Hub {
                 fetch_status: None,
                 downloads: 0,
                 stars: None,
+                supported: false,
             });
             state.stars = inner.discovery.stars_of(&def.repo).or(state.stars);
             derive(def, &mut state);
@@ -600,9 +617,16 @@ impl Hub {
     async fn refresh_self(&self) {
         let Some(hub) = self.lock().catalog.hub.clone() else { return };
         let result = github::fetch_releases(&self.client, &hub.repo, &self.paths.releases).await;
-        let pick = github::pick_latest(&result.releases, &hub.asset_re).map(|(r, a)| (r.clone(), a.clone()));
+        // Bu sistemde kendini güncelleyebileceği dosya; yoksa (ör. elle derlenmiş Linux kopyası) yeni sürüm yine
+        // gösterilir, indirme sürüm sayfasından yapılır.
+        let pick = platform::hub_asset(&hub)
+            .and_then(|re| github::pick_latest(&result.releases, re))
+            .map(|(r, a)| (r.clone(), a.clone()));
+        let shown = pick.clone().or_else(|| {
+            github::pick_latest(&result.releases, &hub.asset_re).map(|(r, a)| (r.clone(), a.clone()))
+        });
         let mut inner = self.lock();
-        inner.self_state = match &pick {
+        inner.self_state = match &shown {
             Some((release, asset)) => SelfState {
                 latest: Some(SelfLatest {
                     version: release.version.clone(),
@@ -612,6 +636,7 @@ impl Hub {
                 update_available: version::compare(&release.version, &self.version).is_gt(),
                 releases: newer_than(&result.releases, &self.version, &release.version),
                 url: Some(release.url.clone()),
+                installable: pick.is_some(),
             },
             None => SelfState::default(),
         };
@@ -784,10 +809,11 @@ impl Hub {
         let (def, pick, keep, kind) = {
             let inner = self.lock();
             let def = inner.catalog.app(&job.id).cloned().ok_or_else(|| HubError::new("unknown-app"))?;
+            let asset_re = platform::app_asset(&def).ok_or_else(|| HubError::new("unsupported"))?;
             let pick = inner
                 .apps
                 .get(&job.id)
-                .and_then(|a| github::pick_latest(&a.releases, &def.windows.asset_re))
+                .and_then(|a| github::pick_latest(&a.releases, asset_re))
                 .map(|(r, a)| (r.clone(), a.clone()));
             let kind = inner.jobs.get(&job.id).map(|j| j.kind).unwrap_or("install");
             (def, pick, inner.settings.keep_installers, kind)
@@ -1020,6 +1046,7 @@ mod tests {
             fetch_status: None,
             downloads: 0,
             stars: None,
+            supported: true,
         }
     }
 
@@ -1050,10 +1077,16 @@ mod tests {
             downloads: 97,
         }];
         // Kurulum durumu değişmeden yalnız GitHub'dan yeni liste geldi: güncelleme ve indirme sayısı hemen görünmeli.
-        set_releases(def, &mut app, vec![release]);
+        set_releases(def, &mut app, vec![release.clone()]);
         assert_eq!(app.latest.as_ref().map(|l| l.version.as_str()), Some("1.6.0"));
         assert!(app.update_available);
         assert_eq!(app.downloads, 97);
+
+        // Bu sistemde kurulamayan uygulama (ör. Linux'ta Robz Vision): son sürüm bilgi olarak görünür, güncelleme önerilmez.
+        derive_with(def, &mut app, None);
+        assert!(!app.supported);
+        assert_eq!(app.latest.as_ref().map(|l| l.version.as_str()), Some("1.6.0"));
+        assert!(!app.update_available);
     }
 
     #[test]

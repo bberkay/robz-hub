@@ -8,7 +8,7 @@ import { bytes, imageUrl, relative } from '../format.js';
 import { excerpt, selectNotes } from '../notes.js';
 import { navigate, useStore } from '../store.js';
 import * as actions from '../actions.js';
-import { AppActions, AppIcon, AppLink, DownloadCount, StarCount, JobError, RunningBadge, Spinner, VersionState } from '../components.js';
+import { AppActions, AppIcon, AppLink, DownloadCount, StarCount, Unsupported, JobError, RunningBadge, Spinner, VersionState } from '../components.js';
 
 const SLIDE_MS = 8000;
 const reducedMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
@@ -25,6 +25,7 @@ function Backdrop({ src }) {
 
 function memberStatus({ def, app, job }) {
   if (job && job.phase !== 'error') return { tone: 'busy', text: def.name };
+  if (!app.supported && !app.install.installed) return { tone: 'muted', text: t('bundle.status.unsupported', { name: def.name }) };
   if (!app.install.installed) return { tone: 'muted', text: t('bundle.status.missing', { name: def.name }) };
   if (app.running) return { tone: 'success', text: t('bundle.status.running', { name: def.name }) };
   if (app.updateAvailable) {
@@ -48,8 +49,12 @@ function BundleSlide({ bundle }) {
   const installable = pending.length > 0 && pending.every((m) => m.app.latest);
   const names = members.map((m) => m.def.name);
 
+  const unsupported = members.some((m) => !m.app.supported && !m.app.install.installed);
+
   let cta;
-  if (busy) {
+  if (unsupported) {
+    cta = html`<${Unsupported} large />`;
+  } else if (busy) {
     cta = html`<button class="btn btn-primary btn-xl" disabled><${Spinner} />${t('bundle.working')}</button>`;
   } else if (missing.length) {
     cta = html`<button class="btn btn-primary btn-xl" disabled=${!installable} onClick=${() => actions.run('installBundle', bundle.id)}>

@@ -11,11 +11,15 @@
   <img src="https://img.shields.io/badge/Rust-Tauri%202-fb8f44?style=flat-square&amp;logo=rust&amp;logoColor=white&amp;labelColor=0d1117" alt="Built with Rust and Tauri 2">
   <img src="https://img.shields.io/badge/installer-~2%20MB-fb8f44?style=flat-square&amp;labelColor=0d1117" alt="Installer about 2 MB">
   <img src="https://img.shields.io/badge/Windows-10%20%7C%2011-3d444d?style=flat-square&amp;labelColor=0d1117" alt="Windows 10 and 11">
+  <img src="https://img.shields.io/badge/Linux-deb%20%7C%20rpm%20%7C%20AppImage-3d444d?style=flat-square&amp;labelColor=0d1117" alt="Linux: deb, rpm and AppImage">
   <img src="https://img.shields.io/badge/interface-T%C3%BCrk%C3%A7e%20%7C%20English-3d444d?style=flat-square&amp;labelColor=0d1117" alt="Interface: Turkish and English">
 </p>
 
 <p align="center">
   <a href="https://github.com/kutsalkiremitci/robz-hub/releases/latest/download/RobzHub-Setup.exe"><img src="https://img.shields.io/badge/FREE%20DOWNLOAD-WINDOWS%2010%20%C2%B7%2011-bd561d?style=for-the-badge&amp;logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjRkZGRkZGIiBzdHJva2Utd2lkdGg9IjIuNiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJNMTIgM3YxMiIvPjxwYXRoIGQ9Im02LjUgOS41IDUuNSA1LjUgNS41LTUuNSIvPjxwYXRoIGQ9Ik00IDIwLjVoMTYiLz48L3N2Zz4%3D&amp;labelColor=8f3f11" alt="Free download: RobzHub-Setup.exe, Windows 10 and 11"></a>
+  <a href="https://github.com/kutsalkiremitci/robz-hub/releases/latest/download/RobzHub-Linux-amd64.deb"><img src="https://img.shields.io/badge/LINUX-.DEB-21262d?style=for-the-badge&amp;logo=linux&amp;logoColor=white" alt="Download for Linux: .deb"></a>
+  <a href="https://github.com/kutsalkiremitci/robz-hub/releases/latest/download/RobzHub-Linux-x86_64.rpm"><img src="https://img.shields.io/badge/LINUX-.RPM-21262d?style=for-the-badge&amp;logo=linux&amp;logoColor=white" alt="Download for Linux: .rpm"></a>
+  <a href="https://github.com/kutsalkiremitci/robz-hub/releases/latest/download/RobzHub-Linux-amd64.AppImage"><img src="https://img.shields.io/badge/LINUX-APPIMAGE-21262d?style=for-the-badge&amp;logo=linux&amp;logoColor=white" alt="Download for Linux: AppImage"></a>
   <a href="https://github.com/kutsalkiremitci/robz-hub/stargazers"><img src="https://img.shields.io/github/stars/kutsalkiremitci/robz-hub?style=for-the-badge&amp;logo=github&amp;label=STAR&amp;labelColor=0d1117&amp;color=e3b341" alt="Star on GitHub"></a>
   <br>
   <a href="https://kutsalkiremitci.github.io/robz-hub/en/"><img src="https://img.shields.io/badge/WEBSITE-21262d?style=for-the-badge&amp;logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjRkZGRkZGIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI%2BPGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iOS41Ii8%2BPHBhdGggZD0iTTIuNSAxMmgxOSIvPjxwYXRoIGQ9Ik0xMiAyLjVjMi42IDIuNiA0IDYgNCA5LjVzLTEuNCA2LjktNCA5LjVjLTIuNi0yLjYtNC02LTQtOS41czEuNC02LjkgNC05LjV6Ii8%2BPC9zdmc%2B" alt="Website"></a>
@@ -27,7 +31,7 @@
 <h3 align="center">Install, update and launch the Robz open-source apps from one place.</h3>
 
 <p align="center">
-  <b>Robz Hub</b> is a small Windows app, written in <b>Rust</b>, that brings every Robz app into one window.<br>
+  <b>Robz Hub</b> is a small Windows and Linux app, written in <b>Rust</b>, that brings every Robz app into one window.<br>
   Play GTA VI at 60 FPS with <b>Robz Play</b> and read its subtitles in Turkish with <b>Robz Vision</b>:<br>
   one click instead of finding, downloading and updating each of them yourself.
 </p>
@@ -68,7 +72,8 @@
 > the picture to 60 FPS and Robz Vision translates the subtitles in that picture.
 
 The list comes from [`catalog.json`](catalog.json) on GitHub. When a new Robz app is added to the catalog, it appears
-for every user without updating Robz Hub.
+for every user without updating Robz Hub. Even before it's in the catalog, a public GitHub repository starting with
+`robz-` joins the list on its own once it publishes a release with a Windows installer.
 
 ## What it does
 
@@ -95,12 +100,23 @@ for every user without updating Robz Hub.
       A new Robz Hub version shows at the top of the Updates page; one click downloads, installs and reopens it.</td>
   </tr>
   <tr>
+    <td valign="top"><b>Finds new apps</b><br>
+      When a new GitHub repository starting with <code>robz-</code> publishes an installer, it joins the list and you
+      get a notification. It checks at most once an hour, with a single request.</td>
+    <td valign="top"><b>Downloads and stars</b><br>
+      Each app's total downloads and stars on GitHub, on its page and on its home page card.</td>
+    <td valign="top"><b>Runs on Linux too</b><br>
+      .deb, .rpm and AppImage. Apps with a Linux package install through your package manager; the rest say
+      <b>Not available on Linux</b>.</td>
+  </tr>
+  <tr>
     <td valign="top"><b>Small and fast</b><br>
-      Built with Rust on Windows' own WebView2: the installer is about <b>2 MB</b> and it opens instantly.</td>
+      Built with Rust on the system's own web view (WebView2 on Windows, WebKitGTK on Linux): the installer is about
+      <b>2 MB</b> and it opens instantly.</td>
     <td valign="top"><b>Collects no data</b><br>
       No account, ads or usage statistics. It only talks to GitHub.</td>
     <td valign="top"><b>Turkish and English</b><br>
-      Follows your Windows language; switch with the flag language picker in the sidebar.</td>
+      Follows your system language; switch with the flag language picker in the sidebar.</td>
   </tr>
 </table>
 
@@ -112,6 +128,25 @@ for every user without updating Robz Hub.
    shows **"Windows protected your PC"**, choose **More info** › **Run anyway** (the file isn't digitally signed yet;
    apps that Robz Hub installs don't show this warning).
 3. **Install the apps:** in Robz Hub, press **Install both** on the home page. When it's done, **Launch both**.
+
+### On Linux
+
+Use the [.deb](https://github.com/kutsalkiremitci/robz-hub/releases/latest/download/RobzHub-Linux-amd64.deb) for Debian, Ubuntu and Mint, the [.rpm](https://github.com/kutsalkiremitci/robz-hub/releases/latest/download/RobzHub-Linux-x86_64.rpm)
+for Fedora and openSUSE, or the [AppImage](https://github.com/kutsalkiremitci/robz-hub/releases/latest/download/RobzHub-Linux-amd64.AppImage) anywhere else:
+
+```bash
+sudo apt install ./RobzHub-Linux-amd64.deb     # Debian, Ubuntu, Mint
+sudo dnf install ./RobzHub-Linux-x86_64.rpm    # Fedora
+chmod +x RobzHub-Linux-amd64.AppImage && ./RobzHub-Linux-amd64.AppImage
+```
+
+- On Linux, apps install as system packages; installing and uninstalling open your system's password prompt (pkexec).
+  Robz Hub never sees the password.
+- For now, **Robz DPI** is the app with a Linux package. Robz Play and Robz Vision run on Windows only and show **Not
+  available on Linux**.
+- Robz Hub updates itself too: the AppImage file is replaced, the .deb and .rpm go through your package manager.
+- The tray icon needs `libayatana-appindicator3` (the .deb and .rpm install it); without it Robz Hub runs without a
+  tray icon.
 
 ## User guide
 
@@ -236,7 +271,8 @@ Get-FileHash .\RobzHub-Setup.exe
 
 GitHub allows 60 requests an hour without an account; it can run out when many requests come from one network (for
 example several PCs at home). Robz Hub tells you when the limit lifts and shows the last known versions until then;
-installed apps aren't affected. Checks that find no change don't count against the limit.
+installed apps aren't affected. Robz Hub keeps requests rare: releases are checked at most every half hour, and the
+repository list (new apps and star counts) at most once an hour.
 </details>
 
 <details>
@@ -254,15 +290,17 @@ ends it if it doesn't.
 </details>
 
 <details>
-<summary><b>Which Windows versions are supported?</b></summary>
+<summary><b>Which systems are supported?</b></summary>
 
 64-bit Windows 10 and Windows 11. The interface uses Microsoft Edge WebView2, which Windows already includes; if it's
 missing, the installer fetches it.
+
+64-bit Linux: distributions with WebKitGTK 4.1 (Ubuntu 22.04 and later, Debian 12, Fedora and similar).
 </details>
 
 ## Security and privacy
 
-- **GitHub only.** Robz Hub connects to three places: `api.github.com` (release lists), `raw.githubusercontent.com`
+- **GitHub only.** Robz Hub connects to three places: `api.github.com` (release and repository lists), `raw.githubusercontent.com`
   (catalog and images) and `github.com/<repo>/releases/download/…` (installers). The only thing it sends is a
   `User-Agent: RobzHub/<version>` header. No account, identity, ads or usage data.
 - **Nothing runs unverified.** Installers are downloaded only from the cataloged repository's own release URL; if the
@@ -272,7 +310,8 @@ missing, the installer fetches it.
   code per installer type.
 - **The interface is sandboxed.** Release notes are turned into safe HTML; the interface can't run outside scripts and
   reaches Windows only through a single command. External links open in your default browser.
-- **No admin rights.** Robz Hub and the apps it installs go into your user account only.
+- **No admin rights.** On Windows, Robz Hub and the apps it installs go into your user account only. On Linux,
+  packages install system-wide; your system's password prompt (pkexec) opens each time.
 
 ## Why Rust?
 
@@ -285,6 +324,14 @@ the Windows API.
 
 If you build a Robz app, add an entry to the `apps` list in [`catalog.json`](catalog.json) and bump the `revision` at
 the top. Running Robz Hubs pick up the new catalog within half an hour (or when **Check for updates** is pressed).
+
+**Automatic discovery.** You can also skip the catalog: Robz Hub lists the owner's public `robz-` repositories on
+GitHub at most once an hour, with a single request. A repository whose latest stable release has an `.exe` with
+`setup` or `install` in its name is added as an app; its name comes from the release name and its description from
+the repository. The registry key is found by name in Windows' installed apps list, and the installer type (Inno Setup
+or NSIS) is read from the downloaded file. If the release has a 64-bit `.deb` or `.rpm`, it installs on Linux too
+(the package and program are assumed to be named after the repository). Forks, archived repositories and Robz Hub
+itself are skipped. Once the repository is added to the catalog, the catalog entry wins.
 
 <details>
 <summary><b>Catalog fields</b></summary>
@@ -303,6 +350,8 @@ the top. Running Robz Hubs pick up the new catalog within half an hour (or when 
 | `windows.asset` | Regular expression for the installer's file name in a release (`^RobzPlay-Setup\\.exe$`). |
 | `windows.uninstallKey` | Key under `HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall` (Inno: `{AppId}_is1`). |
 | `windows.defaultDir`, `windows.exe` | Folder to check when there's no registry entry (`%LOCALAPPDATA%\Programs\…`) and the exe to run. |
+| `linux.deb`, `linux.rpm` | Regular expressions for the Linux packages' file names (`^RobzDPI-[0-9.]+-amd64\\.deb$`). Without them the app shows as not available on Linux. |
+| `linux.package`, `linux.exe` | Package name (`robz-dpi`) and the program name under `/usr/bin`. |
 
 `bundles` (apps used together) and `announcements` (a new app, a stream, a Discord invite; `title`, `body`, `url`,
 `linkLabel`, `date`) rotate in the home page's featured area. Both take an `image` for the background; its left side sits
@@ -319,7 +368,8 @@ under the text, so keep the subject on the right and the artwork free of text.
 ## Development
 
 **Requirements:** [Rust](https://rustup.rs) (MSVC), Node.js 22+, Visual Studio's C++ tools and the Windows SDK (Tauri's
-[Windows prerequisites](https://tauri.app/start/prerequisites/)).
+[Windows prerequisites](https://tauri.app/start/prerequisites/)). On Linux: Rust, Node.js 22+ and
+`libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev`; `npm run build` produces the .deb, .rpm and AppImage.
 
 ```powershell
 npm install          # also copies interface libraries to ui/vendor
@@ -340,17 +390,22 @@ ui/                  interface: plain ES modules, Preact + htm, no bundler
   js/locales/        Turkish and English text
 src-tauri/src/
   catalog.rs         catalog validation and loading
+  discover.rs        finding robz- repositories, star counts
   github.rs          release lists, ETag cache
   download.rs        downloading and SHA-256 verification
   installs.rs        registry, exe version, processes, install/uninstall/launch
+  linux.rs           Linux packages: dpkg/rpm, install and uninstall through pkexec
+  platform.rs        the system, and which installer to use on it
   hub.rs             state and job queue
   shell.rs           window, tray, notifications, taskbar
 site/                website (generated from catalog.json)
 ```
 
 **Releasing:** set the same version in `package.json`, `src-tauri/Cargo.toml` and `src-tauri/tauri.conf.json`, add
-notes to [`CHANGELOG.md`](CHANGELOG.md) and push a `vX.Y.Z` tag. The workflow builds the installer and publishes it as
-`RobzHub-Setup-X.Y.Z.exe` and `RobzHub-Setup.exe`; running Robz Hubs show the new version on the Updates page.
+notes to [`CHANGELOG.md`](CHANGELOG.md) and push a `vX.Y.Z` tag. The workflow builds the Windows installer
+(`RobzHub-Setup-X.Y.Z.exe`, `RobzHub-Setup.exe`) and the Linux packages (`RobzHub-X.Y.Z-amd64.deb`,
+`RobzHub-X.Y.Z-x86_64.rpm`, `RobzHub-X.Y.Z-amd64.AppImage` plus fixed `RobzHub-Linux-…` names) and publishes them in
+one release; running Robz Hubs show the new version on the Updates page.
 
 ## Support and contributing
 

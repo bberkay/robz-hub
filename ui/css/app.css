@@ -733,6 +733,29 @@
 }
 
 /* GitHub'daki indirme sayısı */
+/* Bu sistemde kurulamayan uygulama */
+.unsupported {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px dashed var(--border-default);
+  border-radius: 6px;
+  color: var(--fg-muted);
+  font-size: 13px;
+  white-space: nowrap;
+}
+.unsupported-lg {
+  height: 44px;
+  padding: 0 16px;
+  border-color: rgba(255, 255, 255, 0.25);
+  background: rgba(13, 17, 23, 0.55);
+  color: var(--fg-default);
+  font-size: 15px;
+  font-weight: 600;
+}
+
 /* İndirme ve yıldız sayısı: beyaz yazı, simgeler sakin; dikkat çeker ama bağırmaz. */
 .dl-count,
 .star-count {

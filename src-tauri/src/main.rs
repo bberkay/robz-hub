@@ -16,6 +16,8 @@ mod error;
 mod github;
 mod hub;
 mod installs;
+mod linux;
+mod platform;
 mod settings;
 mod shell;
 mod version;
@@ -57,9 +59,27 @@ fn run_self_update(setup: &Path) -> std::io::Result<()> {
     std::process::Command::new("cmd.exe").raw_arg(script).creation_flags(0x0800_0000).spawn().map(drop)
 }
 
+/// Linux: AppImage ise dosya yenisiyle değiştirilir; .deb/.rpm ise paket yöneticisi yeni paketi kurar (pkexec parola
+/// penceresi). Ardından Robz Hub, bu süreç kapandıktan sonra yeniden açılır.
 #[cfg(not(windows))]
-fn run_self_update(_setup: &Path) -> std::io::Result<()> {
-    Err(std::io::Error::other("yalnız Windows"))
+async fn run_self_update_linux(file: &Path) -> HubResult<()> {
+    let target = if let Some(appimage) = platform::appimage_path() {
+        use std::os::unix::fs::PermissionsExt;
+        let temp = appimage.with_extension("new");
+        let io = |e: std::io::Error| HubError::with("installer-failed", e);
+        std::fs::copy(file, &temp).map_err(io)?;
+        std::fs::set_permissions(&temp, std::fs::Permissions::from_mode(0o755)).map_err(io)?;
+        std::fs::rename(&temp, &appimage).map_err(io)?;
+        appimage
+    } else {
+        linux::install(file).await?;
+        linux::find_program("robz-hub").ok_or_else(|| HubError::with("installer-failed", "robz-hub bulunamadı"))?
+    };
+    std::process::Command::new("sh")
+        .args(["-c", "sleep 2; exec \"$0\"", &target.display().to_string()])
+        .spawn()
+        .map(drop)
+        .map_err(|e| HubError::with("installer-failed", e))
 }
 
 async fn dispatch(app: &AppHandle, hub: &Arc<Hub>, method: &str, args: &[Value]) -> HubResult<Value> {
@@ -93,7 +113,10 @@ async fn dispatch(app: &AppHandle, hub: &Arc<Hub>, method: &str, args: &[Value])
                 if hub.dry_run {
                     hub.clear_job(HUB_ID);
                 } else {
+                    #[cfg(windows)]
                     run_self_update(&setup).map_err(|e| HubError::with("installer-failed", e))?;
+                    #[cfg(not(windows))]
+                    run_self_update_linux(&setup).await?;
                     app.exit(0);
                 }
             }
@@ -130,7 +153,10 @@ fn main() {
             hub.refresh_installs();
             tauri::async_runtime::spawn(hub.clone().worker(jobs));
 
-            shell::create_tray(app.handle(), &hub)?;
+            // Linux'ta tepsi için appindicator kitaplığı gerekir; yoksa Robz Hub tepsisiz çalışır.
+            if let Err(error) = shell::create_tray(app.handle(), &hub) {
+                eprintln!("tepsi simgesi oluşturulamadı: {error}");
+            }
             // Windows açılışında (--hidden) yalnız tepside başlar.
             if !start_hidden {
                 shell::create_window(app.handle())?;

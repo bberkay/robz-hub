@@ -31,6 +31,10 @@ static DEFAULT_DIR: LazyLock<Regex> = LazyLock::new(|| {
 });
 pub(crate) static HTTPS: LazyLock<Regex> = LazyLock::new(|| re(r#"^https://[^\s"'<>]+$"#));
 static LOCAL_IMAGE: LazyLock<Regex> = LazyLock::new(|| re(r"^assets/[A-Za-z0-9/_.-]+\.(png|webp|svg|jpg)$"));
+/// Linux paket adı (dpkg/rpm kurallarının ortak, güvenli alt kümesi).
+static PACKAGE: LazyLock<Regex> = LazyLock::new(|| re(r"^[a-z0-9][a-z0-9.+-]{0,62}$"));
+/// Linux'ta PATH içindeki program adı.
+static LINUX_EXE: LazyLock<Regex> = LazyLock::new(|| re(r"^[A-Za-z0-9._-]{1,60}$"));
 static LINK_KEY: LazyLock<Regex> = LazyLock::new(|| re(r"^[a-z]{2,20}$"));
 static DATE: LazyLock<Regex> = LazyLock::new(|| re(r"^\d{4}-\d{2}-\d{2}$"));
 
@@ -81,6 +85,21 @@ pub struct WindowsConf {
     pub asset_re: Regex,
 }
 
+/// Linux paketi: .deb ve/veya .rpm dosyası, paket adı ve /usr/bin altındaki program adı. Yoksa uygulama Linux'ta
+/// "desteklenmiyor" görünür.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LinuxConf {
+    pub deb: Option<String>,
+    pub rpm: Option<String>,
+    pub package: String,
+    pub exe: String,
+    #[serde(skip)]
+    pub deb_re: Option<Regex>,
+    #[serde(skip)]
+    pub rpm_re: Option<Regex>,
+}
+
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AppDef {
@@ -101,6 +120,7 @@ pub struct AppDef {
     pub links: BTreeMap<String, String>,
     pub release_notes: ReleaseNotesConf,
     pub windows: WindowsConf,
+    pub linux: Option<LinuxConf>,
     /// Katalogda yok; GitHub'da robz- ile başlayan herkese açık bir depo olarak kendiliğinden bulundu (discover.rs).
     pub discovered: bool,
 }
@@ -134,6 +154,16 @@ pub struct HubConf {
     pub asset: String,
     #[serde(skip)]
     pub asset_re: Regex,
+    /// Robz Hub'ın Linux paketleri (kendi güncellemesi için).
+    #[serde(skip)]
+    pub linux: HubLinuxConf,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct HubLinuxConf {
+    pub deb: Option<Regex>,
+    pub rpm: Option<Regex>,
+    pub appimage: Option<Regex>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -196,6 +226,27 @@ fn pattern(value: &Value) -> Option<(String, Regex)> {
     let s = value.as_str().filter(|s| s.len() <= 200)?;
     let compiled = RegexBuilder::new(s).size_limit(1 << 20).build().ok()?;
     Some((s.to_string(), compiled))
+}
+
+fn parse_linux(value: &Value) -> Option<LinuxConf> {
+    if !value.is_object() {
+        return None;
+    }
+    let package = matches(&value["package"], &PACKAGE)?;
+    let exe = matches(&value["exe"], &LINUX_EXE)?;
+    let deb = pattern(&value["deb"]);
+    let rpm = pattern(&value["rpm"]);
+    if deb.is_none() && rpm.is_none() {
+        return None;
+    }
+    Some(LinuxConf {
+        deb: deb.as_ref().map(|(s, _)| s.clone()),
+        rpm: rpm.as_ref().map(|(s, _)| s.clone()),
+        package,
+        exe,
+        deb_re: deb.map(|(_, r)| r),
+        rpm_re: rpm.map(|(_, r)| r),
+    })
 }
 
 fn links(value: &Value) -> BTreeMap<String, String> {
@@ -267,6 +318,7 @@ fn parse_app(raw: &Value) -> Option<AppDef> {
                 .collect(),
         },
         windows: WindowsConf { installer, asset, uninstall_key, default_dir, exe, asset_re },
+        linux: parse_linux(&raw["linux"]),
         discovered: false,
     })
 }
@@ -331,7 +383,13 @@ pub fn parse(raw: &Value) -> Option<Catalog> {
     let hub = (|| {
         let repo = matches(&raw["hub"]["repo"], &REPO)?;
         let (asset, asset_re) = pattern(&raw["hub"]["asset"])?;
-        Some(HubConf { repo, asset, asset_re })
+        let linux = &raw["hub"]["linux"];
+        let linux = HubLinuxConf {
+            deb: pattern(&linux["deb"]).map(|(_, r)| r),
+            rpm: pattern(&linux["rpm"]).map(|(_, r)| r),
+            appimage: pattern(&linux["appimage"]).map(|(_, r)| r),
+        };
+        Some(HubConf { repo, asset, asset_re, linux })
     })();
 
     Some(Catalog {
@@ -402,6 +460,16 @@ mod tests {
         assert!(!dpi.windows.asset_re.is_match("RobzDPI-Setup.exe"));
         assert_eq!(dpi.windows.default_dir.as_deref(), Some(r"%LOCALAPPDATA%\Robz DPI"));
         assert!(dpi.icon.as_deref().is_some_and(|u| u.starts_with("https://")));
+        let linux = dpi.linux.as_ref().expect("Robz DPI'ın Linux paketi var");
+        assert_eq!((linux.package.as_str(), linux.exe.as_str()), ("robz-dpi", "robz-dpi"));
+        assert!(linux.deb_re.as_ref().unwrap().is_match("RobzDPI-0.2.0-amd64.deb"));
+        assert!(!linux.deb_re.as_ref().unwrap().is_match("RobzDPI-Linux-amd64.deb"));
+        assert!(linux.rpm_re.as_ref().unwrap().is_match("RobzDPI-0.2.0-x86_64.rpm"));
+        assert!(catalog.app("robz-play").unwrap().linux.is_none());
+        let hub = catalog.hub.as_ref().unwrap();
+        assert!(hub.linux.deb.as_ref().unwrap().is_match("RobzHub-0.1.6-amd64.deb"));
+        assert!(hub.linux.rpm.as_ref().unwrap().is_match("RobzHub-0.1.6-x86_64.rpm"));
+        assert!(hub.linux.appimage.as_ref().unwrap().is_match("RobzHub-0.1.6-amd64.AppImage"));
         assert_eq!(catalog.bundles.len(), 1);
         assert!(catalog.bundles[0].image.as_deref().is_some_and(|u| u.starts_with("https://")));
         let play = catalog.app("robz-play").unwrap();

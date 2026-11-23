@@ -1,9 +1,14 @@
 {
   "schema": 1,
-  "revision": 3,
+  "revision": 4,
   "hub": {
     "repo": "kutsalkiremitci/robz-hub",
-    "asset": "^RobzHub-Setup-[0-9.]+\\.exe$"
+    "asset": "^RobzHub-Setup-[0-9.]+\\.exe$",
+    "linux": {
+      "deb": "^RobzHub-[0-9.]+-amd64\\.deb$",
+      "rpm": "^RobzHub-[0-9.]+-x86_64\\.rpm$",
+      "appimage": "^RobzHub-[0-9.]+-amd64\\.AppImage$"
+    }
   },
   "links": {
     "github": "https://github.com/kutsalkiremitci/robz-hub",
@@ -321,6 +326,12 @@
         "uninstallKey": "Robz DPI",
         "defaultDir": "%LOCALAPPDATA%\\Robz DPI",
         "exe": "RobzDPI.exe"
+      },
+      "linux": {
+        "deb": "^RobzDPI-[0-9.]+-amd64\\.deb$",
+        "rpm": "^RobzDPI-[0-9.]+-x86_64\\.rpm$",
+        "package": "robz-dpi",
+        "exe": "robz-dpi"
       }
     }
   ]

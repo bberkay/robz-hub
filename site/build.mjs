@@ -16,6 +16,11 @@ const REPO = 'kutsalkiremitci/robz-hub';
 const SITE = 'https://kutsalkiremitci.github.io/robz-hub/';
 const REPO_URL = `https://github.com/${REPO}`;
 const DOWNLOAD = `${REPO_URL}/releases/latest/download/RobzHub-Setup.exe`;
+const LINUX = [
+  ['.deb', `${REPO_URL}/releases/latest/download/RobzHub-Linux-amd64.deb`],
+  ['.rpm', `${REPO_URL}/releases/latest/download/RobzHub-Linux-x86_64.rpm`],
+  ['AppImage', `${REPO_URL}/releases/latest/download/RobzHub-Linux-amd64.AppImage`],
+];
 
 const catalog = JSON.parse(readFileSync(join(root, 'catalog.json'), 'utf8'));
 const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
@@ -224,6 +229,7 @@ function downloadButtons(t, { big = false } = {}) {
       <a class="btn btn-star ${big ? 'btn-xl' : 'btn-lg'}" href="${REPO_URL}" title="${esc(t.starTitle)}">
         ${icon('star', 18)}<span>${esc(t.star)}</span><span class="btn-count" data-stars ${live.stars == null ? 'hidden' : ''}>${live.stars ?? ''}</span>
       </a>
+      <p class="cta-linux">${esc(t.linux)} ${LINUX.map(([label, href]) => `<a href="${href}">${label}</a>`).join('<span aria-hidden="true"> · </span>')}</p>
     </div>`;
 }
 
@@ -265,7 +271,7 @@ function page(t) {
     '@context': 'https://schema.org',
     '@type': 'SoftwareApplication',
     name: 'Robz Hub',
-    operatingSystem: 'Windows 10, Windows 11',
+    operatingSystem: 'Windows 10, Windows 11, Linux',
     applicationCategory: 'UtilitiesApplication',
     description: t.description,
     downloadUrl: DOWNLOAD,

@@ -10,7 +10,7 @@
 //! adıyla aranır (installs::detect), kurulum türü (Inno Setup ya da NSIS) indirilen dosyanın içinden okunur.
 //! Yalnız sahibin kendi depoları alınır; çatallar (fork), arşivlenmiş depolar ve Robz Hub'ın kendisi atlanır.
 
-use crate::catalog::{self, AppDef, Catalog, InstallerType, ReleaseNotesConf, Text, WindowsConf};
+use crate::catalog::{self, AppDef, Catalog, InstallerType, LinuxConf, ReleaseNotesConf, Text, WindowsConf};
 use crate::github::{self, Release};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
@@ -29,6 +29,9 @@ pub const RETRY_NOT_APP_MS: u64 = 6 * 60 * 60 * 1000;
 pub const ASSET: &str = r"(?i)^[A-Za-z0-9._ -]*(setup|install)[A-Za-z0-9._ -]*\.exe$";
 
 static ASSET_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(ASSET).expect("geçerli düzenli ifade"));
+/// Linux paketleri: 64 bit .deb ve .rpm.
+pub const DEB: &str = r"(?i)^[A-Za-z0-9._ -]*(amd64|x86_64)[A-Za-z0-9._ -]*\.deb$";
+pub const RPM: &str = r"(?i)^[A-Za-z0-9._ -]*(x86_64|amd64)[A-Za-z0-9._ -]*\.rpm$";
 static TRAILING_VERSION: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"(?i)[\s_-]*v?\d+(\.\d+){0,3}\s*$").expect("geçerli düzenli ifade"));
 
@@ -195,6 +198,17 @@ pub fn normalize(text: &str) -> String {
 pub fn app_def(info: &RepoInfo, releases: &[Release]) -> Option<AppDef> {
     github::pick_latest(releases, &ASSET_RE)?;
     let slug = info.repo.rsplit('/').next()?.to_ascii_lowercase();
+    // Linux: son kararlı sürümde .deb ya da .rpm varsa; Tauri paketi ve programı depo adıyla adlandırır.
+    let deb = Regex::new(DEB).ok().filter(|r| github::pick_latest(releases, r).is_some());
+    let rpm = Regex::new(RPM).ok().filter(|r| github::pick_latest(releases, r).is_some());
+    let linux = (deb.is_some() || rpm.is_some()).then(|| LinuxConf {
+        deb: deb.as_ref().map(|_| DEB.to_string()),
+        rpm: rpm.as_ref().map(|_| RPM.to_string()),
+        package: slug.clone(),
+        exe: slug.clone(),
+        deb_re: deb,
+        rpm_re: rpm,
+    });
     if !catalog::ID.is_match(&slug) {
         return None;
     }
@@ -238,6 +252,7 @@ pub fn app_def(info: &RepoInfo, releases: &[Release]) -> Option<AppDef> {
             exe: String::new(),
             asset_re: ASSET_RE.clone(),
         },
+        linux,
         discovered: true,
     })
 }
@@ -340,6 +355,15 @@ mod tests {
         assert!(def.windows.asset_re.is_match("RobzDPI-Setup.exe"));
         assert!(def.windows.asset_re.is_match("robz-new_install-x64.exe"));
         assert!(!def.windows.asset_re.is_match("RobzDPI-Portable.exe"));
+        assert!(def.linux.is_none());
+        let with_linux = app_def(
+            &info,
+            &[release("Robz DPI 0.2.0", "0.2.0", &["RobzDPI-Setup.exe", "RobzDPI-0.2.0-amd64.deb", "RobzDPI-0.2.0-aarch64.rpm"])],
+        )
+        .unwrap();
+        let linux = with_linux.linux.expect("deb var");
+        assert_eq!(linux.package, "robz-dpi");
+        assert!(linux.deb_re.is_some() && linux.rpm_re.is_none());
     }
 
     #[test]

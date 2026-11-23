@@ -3,6 +3,27 @@
 Her sürümün notları burada `## X.Y.Z` başlığı altında durur; sürüm iş akışı (.github/workflows/release.yml) GitHub
 sürüm notunu bu bölümden alır.
 
+## 0.1.6
+
+<!-- tr -->
+- **Linux desteği.** Robz Hub artık Linux'ta da çalışır: .deb (Debian, Ubuntu, Mint), .rpm (Fedora, openSUSE) ve AppImage. Linux paketi olan uygulamalar paket yöneticisiyle kurulur, güncellenir ve kaldırılır; bunun için sistemin parola penceresi açılır. Linux sürümü olmayan uygulamalarda "Linux'ta desteklenmiyor" yazar. Robz Hub kendini Linux'ta da günceller.
+- **Yeni uygulamaları kendisi bulur.** GitHub'da robz- ile başlayan yeni bir depo kurulum dosyası yayınlayınca, kataloğa eklenmeyi beklemeden Robz Hub'da görünür ve bildirim gelir. Denetim saatte en çok bir kez, tek istekle yapılır.
+- **Robz DPI eklendi.** Yalnız seçtiğin sitelerde çalışan açık kaynak DPI aracı; Windows'ta ve Linux'ta kurulur.
+- **İndirme ve yıldız sayıları.** Uygulama sayfasında GitHub'daki toplam indirme ve yıldız sayısı görünür; ana sayfadaki kartlarda indirme sayısı beyaz, yıldız sarı.
+- Simgesi yüklenemeyen uygulamada adının baş harfleri görünür.
+
+<!-- en -->
+<details><summary>English</summary>
+
+- **Linux support.** Robz Hub now runs on Linux too: .deb (Debian, Ubuntu, Mint), .rpm (Fedora, openSUSE) and AppImage. Apps with a Linux package install, update and uninstall through your package manager, which opens your system's password prompt. Apps without a Linux version say "Not available on Linux". Robz Hub updates itself on Linux too.
+- **Finds new apps on its own.** When a new GitHub repository starting with robz- publishes an installer, it shows up in Robz Hub without waiting for the catalog, and you get a notification. It checks at most once an hour, with a single request.
+- **Robz DPI added.** An open-source DPI tool that works only on the sites you choose; installs on Windows and Linux.
+- **Downloads and stars.** The app page shows the total downloads and stars on GitHub; on the home page cards, downloads are white and stars yellow.
+- An app whose icon can't load shows the initials of its name.
+
+</details>
+<!-- end -->
+
 ## 0.1.5
 
 <!-- tr -->

@@ -169,6 +169,16 @@ h3 {
   gap: 12px;
   margin-top: 32px;
 }
+.cta-linux {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--fg-muted);
+  font-size: 14px;
+}
+.cta-linux a {
+  color: var(--fg-default);
+  font-weight: 600;
+}
 .btn {
   display: inline-flex;
   align-items: center;

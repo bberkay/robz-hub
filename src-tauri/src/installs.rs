@@ -17,8 +17,11 @@ use std::time::Duration;
 #[cfg(windows)]
 use std::os::windows::process::CommandExt;
 
+#[cfg_attr(not(windows), allow(dead_code))]
 const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+#[cfg_attr(not(windows), allow(dead_code))]
 const DETACHED_PROCESS: u32 = 0x0000_0008;
+#[cfg_attr(not(windows), allow(dead_code))]
 const CREATE_NEW_PROCESS_GROUP: u32 = 0x0000_0200;
 
 #[derive(Debug, Clone, Default, Serialize, PartialEq, Eq)]
@@ -238,6 +241,7 @@ fn registry_search(_wanted: &[String]) -> Vec<RegistryEntry> {
     Vec::new()
 }
 
+#[cfg_attr(not(windows), allow(dead_code))]
 /// "Robz DPI", "RobzDPI", "Robz Vision version 1.6.0" gibi adlar "robzdpi" / "robzvision" ile eşleşir.
 pub fn name_matches(display: &str, wanted: &[String]) -> bool {
     let display = crate::discover::normalize(display);
@@ -333,9 +337,14 @@ pub fn file_version(_path: &Path) -> Option<String> {
     None
 }
 
-/// Karşılaştırma için yol: küçük harf, ters eğik çizgi.
+/// Karşılaştırma için yol. Windows'ta küçük harf ve ters eğik çizgi; Linux'ta yol olduğu gibi (büyük/küçük harf
+/// duyarlı).
 pub fn norm_path(path: &str) -> String {
-    path.replace('/', "\\").to_lowercase()
+    if cfg!(windows) {
+        path.replace('/', "\\").to_lowercase()
+    } else {
+        path.to_string()
+    }
 }
 
 /// Adı `names` içinde olan çalışan süreçler: tam exe yolu (norm_path) -> PID'ler.
@@ -386,7 +395,26 @@ pub fn running_paths(names: &[String]) -> HashMap<String, Vec<u32>> {
     found
 }
 
-#[cfg(not(windows))]
+/// Linux: /proc/<pid>/exe bağlantısı, çalışan programın tam yolunu verir.
+#[cfg(target_os = "linux")]
+pub fn running_paths(names: &[String]) -> HashMap<String, Vec<u32>> {
+    let wanted: HashSet<String> = names.iter().map(|n| n.to_lowercase()).collect();
+    let mut found: HashMap<String, Vec<u32>> = HashMap::new();
+    let Ok(entries) = std::fs::read_dir("/proc") else { return found };
+    for entry in entries.flatten() {
+        let Some(pid) = entry.file_name().to_str().and_then(|s| s.parse::<u32>().ok()) else { continue };
+        let Ok(exe) = std::fs::read_link(entry.path().join("exe")) else { continue };
+        // Güncellenirken eski dosya silinmişse yolun sonuna " (deleted)" eklenir.
+        let exe = exe.to_string_lossy().trim_end_matches(" (deleted)").to_string();
+        let name = Path::new(&exe).file_name().map(|n| n.to_string_lossy().to_lowercase()).unwrap_or_default();
+        if wanted.contains(&name) {
+            found.entry(norm_path(&exe)).or_default().push(pid);
+        }
+    }
+    found
+}
+
+#[cfg(not(any(windows, target_os = "linux")))]
 pub fn running_paths(_names: &[String]) -> HashMap<String, Vec<u32>> {
     HashMap::new()
 }
@@ -433,7 +461,15 @@ fn detect_by_name(def: &AppDef) -> InstallInfo {
     InstallInfo::default()
 }
 
+/// Uygulama kurulu mu, hangi sürüm, nerede. Linux'ta paket veritabanından (linux.rs).
 pub fn detect(def: &AppDef) -> InstallInfo {
+    if cfg!(target_os = "linux") {
+        return crate::linux::detect(def);
+    }
+    detect_windows(def)
+}
+
+fn detect_windows(def: &AppDef) -> InstallInfo {
     let win = &def.windows;
     if win.installer == InstallerType::Auto {
         return detect_by_name(def);
@@ -476,14 +512,23 @@ pub fn detect(def: &AppDef) -> InstallInfo {
 
 // ---- çalıştırma -----------------------------------------------------------------------------------------------------
 
+/// Süreçleri kapatır: önce kapanma isteği (Windows: pencereye, Linux: SIGTERM), force ise zorla.
 async fn taskkill(pids: &[u32], force: bool) {
-    let mut command = tokio::process::Command::new("taskkill.exe");
-    for pid in pids {
-        command.args(["/PID", &pid.to_string()]);
-    }
-    if force {
-        command.arg("/F");
-    }
+    let mut command = if cfg!(windows) {
+        let mut command = tokio::process::Command::new("taskkill.exe");
+        for pid in pids {
+            command.args(["/PID", &pid.to_string()]);
+        }
+        if force {
+            command.arg("/F");
+        }
+        command
+    } else {
+        let mut command = tokio::process::Command::new("kill");
+        command.arg(if force { "-KILL" } else { "-TERM" });
+        command.args(pids.iter().map(u32::to_string));
+        command
+    };
     #[cfg(windows)]
     command.creation_flags(CREATE_NO_WINDOW);
     let _ = tokio::time::timeout(Duration::from_secs(10), command.status()).await;
@@ -527,6 +572,9 @@ fn spawn_error(code: &str, error: std::io::Error) -> HubError {
 
 /// İndirilen kurulum dosyasını sessiz kipte çalıştırır; bitene kadar bekler.
 pub async fn run_installer(def: &AppDef, file: &Path) -> HubResult<()> {
+    if cfg!(target_os = "linux") {
+        return crate::linux::install(file).await;
+    }
     let kind = match def.windows.installer {
         InstallerType::Auto => sniff_installer(file).unwrap_or(InstallerType::Auto),
         kind => kind,
@@ -543,6 +591,9 @@ pub async fn run_installer(def: &AppDef, file: &Path) -> HubResult<()> {
 /// Kaldırıcıyı sessiz kipte çalıştırır ve dosyalar gerçekten silinene kadar bekler. NSIS kaldırıcısı kendini geçici
 /// klasöre kopyalayıp hemen döndüğü için çıkış koduna değil, exe'nin kaybolmasına bakılır.
 pub async fn run_uninstaller(def: &AppDef, info: &InstallInfo) -> HubResult<()> {
+    if cfg!(target_os = "linux") {
+        return crate::linux::uninstall(def).await;
+    }
     let (Some(uninstaller), Some(dir), Some(exe)) = (&info.uninstaller, &info.dir, &info.exe_path) else {
         return Err(HubError::new("uninstaller-missing"));
     };
@@ -572,10 +623,19 @@ pub fn launch(info: &InstallInfo) -> HubResult<()> {
         return Err(HubError::new("not-installed"));
     }
     let mut command = std::process::Command::new(exe);
-    command.current_dir(dir);
+    if cfg!(windows) {
+        command.current_dir(dir);
+    } else if let Some(home) = std::env::var_os("HOME") {
+        command.current_dir(home);
+    }
     #[cfg(windows)]
     command.creation_flags(DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP);
-    command.spawn().map(drop).map_err(|e| spawn_error("launch-failed", e))
+    let mut child = command.spawn().map_err(|e| spawn_error("launch-failed", e))?;
+    // Linux'ta kapanan çocuk süreç "zombi" kalmasın diye beklenir (Windows'ta gerekmez, zararı da yok).
+    std::thread::spawn(move || {
+        let _ = child.wait();
+    });
+    Ok(())
 }
 
 #[cfg(test)]
@@ -593,6 +653,8 @@ mod tests {
         assert_eq!(uninstaller_from_string(""), None);
     }
 
+    // Windows yol kuralları (sürücü harfi, ters eğik çizgi, büyük/küçük harf duyarsızlığı)
+    #[cfg(windows)]
     #[test]
     fn matches_running_copies_by_full_path() {
         let installed = r"C:\Users\a\AppData\Local\Programs\Robz Play\RobzPlay.exe";
@@ -616,6 +678,8 @@ mod tests {
         assert!(!is_inside(dir, dir));
     }
 
+    // Windows yol kuralları (sürücü harfi, ters eğik çizgi, büyük/küçük harf duyarsızlığı)
+    #[cfg(windows)]
     #[test]
     fn expands_known_folders_only() {
         std::env::set_var("LOCALAPPDATA", r"C:\Users\a\AppData\Local");
@@ -640,6 +704,8 @@ mod tests {
         assert!(!name_matches("Robz Vision", &[String::new()]));
     }
 
+    // Windows yol kuralları (sürücü harfi, ters eğik çizgi, büyük/küçük harf duyarsızlığı)
+    #[cfg(windows)]
     #[test]
     fn reads_exe_from_display_icon() {
         assert_eq!(icon_path(r#""C:\Apps\Robz DPI\RobzDPI.exe",0"#), Some(PathBuf::from(r"C:\Apps\Robz DPI\RobzDPI.exe")));

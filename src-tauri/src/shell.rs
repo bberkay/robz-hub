@@ -67,9 +67,21 @@ pub fn system_language() -> &'static str {
     }
 }
 
+/// Linux: LANGUAGE, LC_ALL, LC_MESSAGES ya da LANG Türkçe ise ("tr_TR.UTF-8" gibi) Türkçe.
 #[cfg(not(windows))]
 pub fn system_language() -> &'static str {
-    "en"
+    let turkish = ["LANGUAGE", "LC_ALL", "LC_MESSAGES", "LANG"]
+        .iter()
+        .filter_map(|name| std::env::var(name).ok())
+        .filter(|v| !v.is_empty() && v != "C" && v != "POSIX")
+        .flat_map(|v| v.split(':').map(str::to_string).collect::<Vec<_>>())
+        .next()
+        .is_some_and(|first| first.to_ascii_lowercase().starts_with("tr"));
+    if turkish {
+        "tr"
+    } else {
+        "en"
+    }
 }
 
 // ---- pencere --------------------------------------------------------------------------------------------------------
@@ -100,7 +112,8 @@ pub fn create_window(app: &AppHandle) -> tauri::Result<()> {
     window.on_window_event(move |event| match event {
         WindowEvent::CloseRequested { api, .. } => {
             let hub = handle.state::<Arc<Hub>>();
-            if hub.settings().close_to_tray {
+            // Tepsi simgesi yoksa (Linux'ta appindicator kurulu değilse) gizlenen pencereye dönülemez: kapanır.
+            if hub.settings().close_to_tray && handle.tray_by_id(TRAY_ID).is_some() {
                 api.prevent_close();
                 if let Some(window) = handle.get_webview_window(WINDOW) {
                     let _ = window.hide();
@@ -140,7 +153,35 @@ fn build_tray_menu(app: &AppHandle, hub: &Hub) -> tauri::Result<Menu<tauri::Wry>
     Ok(menu)
 }
 
+/// Linux'ta tepsi simgesini appindicator kitaplığı çizer; kitaplık yoksa Tauri çöker (panic = "abort"), bu yüzden
+/// önce bakılır. AppImage kitaplığı kendi içinde taşır (APPDIR).
+#[cfg(target_os = "linux")]
+fn tray_available() -> bool {
+    use std::path::PathBuf;
+    let names = ["libayatana-appindicator3.so.1", "libappindicator3.so.1"];
+    let mut dirs: Vec<PathBuf> =
+        ["/usr/lib", "/usr/lib64", "/usr/lib/x86_64-linux-gnu", "/lib/x86_64-linux-gnu", "/usr/local/lib"]
+            .map(PathBuf::from)
+            .to_vec();
+    if let Some(appdir) = std::env::var_os("APPDIR") {
+        dirs.push(PathBuf::from(appdir).join("usr/lib"));
+    }
+    if let Some(paths) = std::env::var_os("LD_LIBRARY_PATH") {
+        dirs.extend(std::env::split_paths(&paths));
+    }
+    dirs.iter().any(|dir| names.iter().any(|name| dir.join(name).exists()))
+}
+
+#[cfg(not(target_os = "linux"))]
+fn tray_available() -> bool {
+    true
+}
+
 pub fn create_tray(app: &AppHandle, hub: &Hub) -> tauri::Result<()> {
+    if !tray_available() {
+        eprintln!("tepsi kitaplığı (libayatana-appindicator3) yok: Robz Hub tepsisiz çalışıyor");
+        return Ok(());
+    }
     let menu = build_tray_menu(app, hub)?;
     let mut builder = TrayIconBuilder::with_id(TRAY_ID)
         .tooltip("Robz Hub")

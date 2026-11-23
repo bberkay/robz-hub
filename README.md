@@ -11,11 +11,15 @@
   <img src="https://img.shields.io/badge/Rust-Tauri%202-fb8f44?style=flat-square&amp;logo=rust&amp;logoColor=white&amp;labelColor=0d1117" alt="Rust ve Tauri 2 ile yazıldı">
   <img src="https://img.shields.io/badge/kurulum-~2%20MB-fb8f44?style=flat-square&amp;labelColor=0d1117" alt="Kurulum dosyası yaklaşık 2 MB">
   <img src="https://img.shields.io/badge/Windows-10%20%7C%2011-3d444d?style=flat-square&amp;labelColor=0d1117" alt="Windows 10 ve 11">
+  <img src="https://img.shields.io/badge/Linux-deb%20%7C%20rpm%20%7C%20AppImage-3d444d?style=flat-square&amp;labelColor=0d1117" alt="Linux: deb, rpm ve AppImage">
   <img src="https://img.shields.io/badge/aray%C3%BCz-T%C3%BCrk%C3%A7e%20%7C%20English-3d444d?style=flat-square&amp;labelColor=0d1117" alt="Arayüz: Türkçe ve İngilizce">
 </p>
 
 <p align="center">
   <a href="https://github.com/kutsalkiremitci/robz-hub/releases/latest/download/RobzHub-Setup.exe"><img src="https://img.shields.io/badge/%C3%9CCRETS%C4%B0Z%20%C4%B0ND%C4%B0R-WINDOWS%2010%20%C2%B7%2011-bd561d?style=for-the-badge&amp;logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjRkZGRkZGIiBzdHJva2Utd2lkdGg9IjIuNiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJNMTIgM3YxMiIvPjxwYXRoIGQ9Im02LjUgOS41IDUuNSA1LjUgNS41LTUuNSIvPjxwYXRoIGQ9Ik00IDIwLjVoMTYiLz48L3N2Zz4%3D&amp;labelColor=8f3f11" alt="Ücretsiz indir: RobzHub-Setup.exe, Windows 10 ve 11"></a>
+  <a href="https://github.com/kutsalkiremitci/robz-hub/releases/latest/download/RobzHub-Linux-amd64.deb"><img src="https://img.shields.io/badge/LINUX-.DEB-21262d?style=for-the-badge&amp;logo=linux&amp;logoColor=white" alt="Linux için indir: .deb"></a>
+  <a href="https://github.com/kutsalkiremitci/robz-hub/releases/latest/download/RobzHub-Linux-x86_64.rpm"><img src="https://img.shields.io/badge/LINUX-.RPM-21262d?style=for-the-badge&amp;logo=linux&amp;logoColor=white" alt="Linux için indir: .rpm"></a>
+  <a href="https://github.com/kutsalkiremitci/robz-hub/releases/latest/download/RobzHub-Linux-amd64.AppImage"><img src="https://img.shields.io/badge/LINUX-APPIMAGE-21262d?style=for-the-badge&amp;logo=linux&amp;logoColor=white" alt="Linux için indir: AppImage"></a>
   <a href="https://github.com/kutsalkiremitci/robz-hub/stargazers"><img src="https://img.shields.io/github/stars/kutsalkiremitci/robz-hub?style=for-the-badge&amp;logo=github&amp;label=YILDIZ%20VER&amp;labelColor=0d1117&amp;color=e3b341" alt="GitHub'da yıldız ver"></a>
   <br>
   <a href="https://kutsalkiremitci.github.io/robz-hub/"><img src="https://img.shields.io/badge/WEB%20S%C4%B0TES%C4%B0-21262d?style=for-the-badge&amp;logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjRkZGRkZGIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI%2BPGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iOS41Ii8%2BPHBhdGggZD0iTTIuNSAxMmgxOSIvPjxwYXRoIGQ9Ik0xMiAyLjVjMi42IDIuNiA0IDYgNCA5LjVzLTEuNCA2LjktNCA5LjVjLTIuNi0yLjYtNC02LTQtOS41czEuNC02LjkgNC05LjV6Ii8%2BPC9zdmc%2B" alt="Web sitesi"></a>
@@ -27,7 +31,7 @@
 <h3 align="center">Robz'un açık kaynak uygulamalarını tek yerden kur, güncelle ve başlat.</h3>
 
 <p align="center">
-  <b>Robz Hub</b>, Robz uygulamalarını tek bir pencerede toplayan, <b>Rust</b> ile yazılmış küçük bir Windows uygulamasıdır.<br>
+  <b>Robz Hub</b>, Robz uygulamalarını tek bir pencerede toplayan, <b>Rust</b> ile yazılmış küçük bir Windows ve Linux uygulamasıdır.<br>
   GTA VI'yı <b>Robz Play</b> ile 60 FPS oyna, altyazısını <b>Robz Vision</b> ile Türkçe oku:<br>
   ikisini ayrı ayrı aramak, indirmek ve güncel tutmak yerine tek tıkla.
 </p>
@@ -68,7 +72,9 @@
 > 60 FPS'e çıkarır, Robz Vision o görüntüdeki altyazıyı Türkçeye çevirir.
 
 Liste GitHub'daki [`catalog.json`](catalog.json) dosyasından gelir. Yeni bir Robz uygulaması kataloğa eklendiğinde,
-Robz Hub'ı güncellemeye gerek kalmadan bütün kullanıcıların listesinde belirir.
+Robz Hub'ı güncellemeye gerek kalmadan bütün kullanıcıların listesinde belirir. Kataloğa eklenmemiş olsa bile GitHub'da
+`robz-` ile başlayan herkese açık bir depo, Windows kurulum dosyası olan bir sürüm yayınladığında kendiliğinden
+listeye girer.
 
 ## Neler yapar
 
@@ -95,12 +101,23 @@ Robz Hub'ı güncellemeye gerek kalmadan bütün kullanıcıların listesinde be
       Robz Hub'ın yeni sürümü Güncellemeler sayfasının en üstünde çıkar; tek tıkla iner, kurulur, yeniden açılır.</td>
   </tr>
   <tr>
+    <td valign="top"><b>Yeni uygulamaları kendisi bulur</b><br>
+      GitHub'da <code>robz-</code> ile başlayan yeni bir depo kurulum dosyası yayınlayınca listeye girer ve bildirim
+      gelir. Denetim saatte en çok bir kez, tek istekle yapılır.</td>
+    <td valign="top"><b>İndirme ve yıldız sayıları</b><br>
+      Her uygulamanın GitHub'daki toplam indirme ve yıldız sayısı uygulama sayfasında ve ana sayfadaki kartında.</td>
+    <td valign="top"><b>Linux'ta da çalışır</b><br>
+      .deb, .rpm ve AppImage. Linux paketi olan uygulamalar paket yöneticisiyle kurulur; olmayanlar
+      <b>Linux'ta desteklenmiyor</b> yazar.</td>
+  </tr>
+  <tr>
     <td valign="top"><b>Küçük ve hızlı</b><br>
-      Rust ve Windows'un kendi WebView2'siyle yazıldı: kurulum dosyası yaklaşık <b>2 MB</b>, açılışı anlık.</td>
+      Rust ve sistemin kendi web görünümüyle (Windows'ta WebView2, Linux'ta WebKitGTK) yazıldı: kurulum dosyası
+      yaklaşık <b>2 MB</b>, açılışı anlık.</td>
     <td valign="top"><b>Veri toplamaz</b><br>
       Hesap, reklam, kullanım istatistiği yok. Yalnız GitHub ile konuşur.</td>
     <td valign="top"><b>Türkçe ve İngilizce</b><br>
-      Windows diline göre açılır; kenar çubuğundaki bayraklı dil seçiminden değişir.</td>
+      Sistem diline göre açılır; kenar çubuğundaki bayraklı dil seçiminden değişir.</td>
   </tr>
 </table>
 
@@ -112,6 +129,25 @@ Robz Hub'ı güncellemeye gerek kalmadan bütün kullanıcıların listesinde be
    Windows **"Windows kişisel bilgisayarınızı korudu"** uyarısı gösterirse **Ek bilgi** › **Yine de çalıştır**'a bas
    (dosya henüz dijital olarak imzalı değil; Robz Hub'ın kurduğu uygulamalarda bu uyarı çıkmaz).
 3. **Uygulamaları kur:** Robz Hub açılınca ana sayfadaki **İkisini de kur**'a bas. Bittiğinde **İkisini de başlat**.
+
+### Linux'ta
+
+Debian, Ubuntu ve Mint için [.deb](https://github.com/kutsalkiremitci/robz-hub/releases/latest/download/RobzHub-Linux-amd64.deb), Fedora ve openSUSE için
+[.rpm](https://github.com/kutsalkiremitci/robz-hub/releases/latest/download/RobzHub-Linux-x86_64.rpm), diğer dağıtımlar için [AppImage](https://github.com/kutsalkiremitci/robz-hub/releases/latest/download/RobzHub-Linux-amd64.AppImage):
+
+```bash
+sudo apt install ./RobzHub-Linux-amd64.deb     # Debian, Ubuntu, Mint
+sudo dnf install ./RobzHub-Linux-x86_64.rpm    # Fedora
+chmod +x RobzHub-Linux-amd64.AppImage && ./RobzHub-Linux-amd64.AppImage
+```
+
+- Linux'ta uygulamalar sistem paketi olarak kurulur; kurarken ve kaldırırken sistemin parola penceresi açılır
+  (pkexec). Robz Hub parolayı görmez.
+- Şimdilik Linux paketi olan uygulama **Robz DPI**'dır. Robz Play ve Robz Vision yalnız Windows'ta çalışır; Linux'ta
+  **Linux'ta desteklenmiyor** yazar.
+- Robz Hub kendini de günceller: AppImage dosyası yenisiyle değişir, .deb ve .rpm paket yöneticisiyle kurulur.
+- Tepsi simgesi için `libayatana-appindicator3` gerekir (.deb ve .rpm onu birlikte kurar); yoksa Robz Hub tepsisiz
+  çalışır.
 
 ## Kullanım kılavuzu
 
@@ -238,7 +274,8 @@ Get-FileHash .\RobzHub-Setup.exe
 
 GitHub, hesapsız isteklere saatte 60 sınır koyar; aynı ağdan çok sayıda istek yapıldığında (ör. aynı evde birkaç
 bilgisayar) dolabilir. Robz Hub sınırın ne zaman kalkacağını yazar ve o zamana kadar son bilinen sürümleri gösterir;
-kurulu uygulamaların çalışmasına etkisi yoktur. Değişiklik olmayan denetimler sınıra sayılmaz.
+kurulu uygulamaların çalışmasına etkisi yoktur. Robz Hub istekleri seyrek tutar: sürümler yarım saatten sık
+denetlenmez, depo listesi (yeni uygulamalar ve yıldız sayıları) saatte en çok bir kez sorulur.
 </details>
 
 <details>
@@ -256,15 +293,17 @@ dener, kapanmazsa sonlandırır.
 </details>
 
 <details>
-<summary><b>Hangi Windows sürümlerinde çalışır?</b></summary>
+<summary><b>Hangi sistemlerde çalışır?</b></summary>
 
 64 bit Windows 10 ve Windows 11. Arayüz için Windows'ta zaten bulunan Microsoft Edge WebView2 kullanılır; bilgisayarında
 yoksa kurulum onu kendisi indirir.
+
+64 bit Linux: WebKitGTK 4.1 olan dağıtımlar (Ubuntu 22.04 ve sonrası, Debian 12, Fedora ve benzerleri).
 </details>
 
 ## Güvenlik ve gizlilik
 
-- **Yalnız GitHub.** Robz Hub üç adrese bağlanır: `api.github.com` (sürüm listesi), `raw.githubusercontent.com`
+- **Yalnız GitHub.** Robz Hub üç adrese bağlanır: `api.github.com` (sürüm ve depo listesi), `raw.githubusercontent.com`
   (katalog ve görseller) ve `github.com/<depo>/releases/download/…` (kurulum dosyaları). Gönderilen tek bilgi
   `User-Agent: RobzHub/<sürüm>` başlığıdır. Hesap, kimlik, reklam ya da kullanım verisi yoktur.
 - **Doğrulanmadan çalıştırılmaz.** Kurulum dosyası yalnız katalogdaki deponun kendi sürüm adresinden indirilir; boyutu
@@ -273,7 +312,8 @@ yoksa kurulum onu kendisi indirir.
   beklenen biçimdeyse kabul edilir. Kurulum parametreleri katalogdan gelmez; kurulum türüne göre kodda sabittir.
 - **Arayüz kapalı kutudur.** Sürüm notları güvenli HTML'e çevrilir; arayüz dışarıdan betik çalıştıramaz, Windows'a
   yalnız tek bir komut üzerinden erişir. Dış bağlantılar varsayılan tarayıcında açılır.
-- **Yönetici izni yok.** Robz Hub da, kurduğu uygulamalar da yalnız senin kullanıcı hesabına kurulur.
+- **Yönetici izni yok.** Windows'ta Robz Hub da, kurduğu uygulamalar da yalnız senin kullanıcı hesabına kurulur.
+  Linux'ta paketler sistem geneline kurulur; her seferinde sistemin parola penceresi (pkexec) açılır.
 
 ## Neden Rust?
 
@@ -287,6 +327,13 @@ doğrudan Rust ile, Windows API'si üzerinden yapılır.
 Bir Robz uygulaması geliştiriyorsan Robz Hub'a eklemek için [`catalog.json`](catalog.json) içindeki `apps` listesine
 bir kayıt ekle ve en üstteki `revision` değerini bir artır. Çalışan Robz Hub'lar güncel kataloğu en geç yarım saat
 içinde (ya da **Güncellemeleri denetle**'ye basınca) alır.
+
+**Kendiliğinden bulma.** Kataloğa eklemesen de olur: Robz Hub, sahibin GitHub'daki herkese açık `robz-` depolarını saatte
+en çok bir kez tek istekle listeler. Son kararlı sürümünde adında `setup` ya da `install` geçen bir `.exe` olan
+depo uygulama olarak eklenir; adı sürüm adından, açıklaması deponun açıklamasından gelir. Kayıt anahtarı Windows'un
+yüklü uygulamalar listesinde adıyla aranır, kurulum türü (Inno Setup ya da NSIS) indirilen dosyanın içinden okunur.
+Sürümde 64 bit `.deb` ya da `.rpm` varsa Linux'ta da kurulur (paket ve program adı depo adı sayılır). Çatallar,
+arşivlenmiş depolar ve Robz Hub'ın kendisi atlanır. Aynı depo kataloğa eklenince katalogdaki kayıt geçerli olur.
 
 <details>
 <summary><b>Katalog alanları</b></summary>
@@ -305,6 +352,8 @@ içinde (ya da **Güncellemeleri denetle**'ye basınca) alır.
 | `windows.asset` | Sürümdeki kurulum dosyasının adı için düzenli ifade (`^RobzPlay-Setup\\.exe$`). |
 | `windows.uninstallKey` | `HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall` altındaki anahtar (Inno: `{AppId}_is1`). |
 | `windows.defaultDir`, `windows.exe` | Kayıt yoksa bakılacak klasör (`%LOCALAPPDATA%\Programs\…`) ve çalıştırılacak exe. |
+| `linux.deb`, `linux.rpm` | Linux paketlerinin adı için düzenli ifade (`^RobzDPI-[0-9.]+-amd64\\.deb$`). Yoksa uygulama Linux'ta desteklenmiyor görünür. |
+| `linux.package`, `linux.exe` | Paket adı (`robz-dpi`) ve `/usr/bin` altındaki program adı. |
 
 `bundles` birlikte kullanılan uygulamaları, `announcements` ise duyuruları (yeni uygulama, yayın, Discord daveti gibi;
 `title`, `body`, `url`, `linkLabel`, `date`) ana sayfanın tanıtım alanında sırayla gösterir. İkisi de arka plan için
@@ -321,7 +370,8 @@ içinde (ya da **Güncellemeleri denetle**'ye basınca) alır.
 ## Geliştirme
 
 **Gerekenler:** [Rust](https://rustup.rs) (MSVC), Node.js 22+, Visual Studio'nun C++ araçları ve Windows SDK
-(Tauri'nin [Windows ön koşulları](https://tauri.app/start/prerequisites/)).
+(Tauri'nin [Windows ön koşulları](https://tauri.app/start/prerequisites/)). Linux'ta Rust, Node.js 22+ ve
+`libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev`; `npm run build` .deb, .rpm ve AppImage üretir.
 
 ```powershell
 npm install          # arayüz kütüphanelerini de ui/vendor'a kopyalar
@@ -342,18 +392,22 @@ ui/                  arayüz: düz ES modülleri, Preact + htm, paketleyici yok
   js/locales/        Türkçe ve İngilizce metinler
 src-tauri/src/
   catalog.rs         katalog doğrulama ve yükleme
+  discover.rs        robz- depolarını kendiliğinden bulma, yıldız sayıları
   github.rs          sürüm listesi, ETag önbelleği
   download.rs        indirme ve SHA-256 doğrulama
   installs.rs        kayıt defteri, exe sürümü, süreçler, kurulum/kaldırma/başlatma
+  linux.rs           Linux paketleri: dpkg/rpm, pkexec ile kurma ve kaldırma
+  platform.rs        sistem ve o sistemde kullanılacak kurulum dosyası
   hub.rs             durum ve iş kuyruğu
   shell.rs           pencere, tepsi, bildirim, görev çubuğu
 site/                web sitesi (catalog.json'dan üretilir)
 ```
 
 **Sürüm yayınlamak:** sürüm numarasını `package.json`, `src-tauri/Cargo.toml` ve `src-tauri/tauri.conf.json`'da aynı
-yap, [`CHANGELOG.md`](CHANGELOG.md)'ye notları yaz ve `vX.Y.Z` etiketini gönder. İş akışı kurulum dosyasını derler ve
-`RobzHub-Setup-X.Y.Z.exe` ile `RobzHub-Setup.exe` adlarıyla yayınlar; çalışan Robz Hub'lar yeni sürümü Güncellemeler
-sayfasında gösterir.
+yap, [`CHANGELOG.md`](CHANGELOG.md)'ye notları yaz ve `vX.Y.Z` etiketini gönder. İş akışı Windows kurulum dosyasını
+(`RobzHub-Setup-X.Y.Z.exe`, `RobzHub-Setup.exe`) ve Linux paketlerini (`RobzHub-X.Y.Z-amd64.deb`,
+`RobzHub-X.Y.Z-x86_64.rpm`, `RobzHub-X.Y.Z-amd64.AppImage` ve `RobzHub-Linux-…` sabit adları) derleyip tek sürümde
+yayınlar; çalışan Robz Hub'lar yeni sürümü Güncellemeler sayfasında gösterir.
 
 ## Destek ve katkı
 

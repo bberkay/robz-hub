@@ -1,11 +1,15 @@
-# Sürüm yayınlama: "vX.Y.Z" etiketi gönderilince kurulum dosyası derlenir ve GitHub sürümüne yüklenir.
+# Sürüm yayınlama: "vX.Y.Z" etiketi gönderilince Windows ve Linux paketleri derlenir ve GitHub sürümüne yüklenir.
 #
 #   1. Sürüm numarasını üç dosyada aynı yap: package.json, src-tauri/Cargo.toml, src-tauri/tauri.conf.json
 #   2. CHANGELOG.md'ye "## X.Y.Z" başlığıyla notları yaz
 #   3. git tag vX.Y.Z && git push origin vX.Y.Z
 #
-# Robz Hub kendi güncellemesini bu sürümdeki "RobzHub-Setup-X.Y.Z.exe" dosyasından alır (catalog.json -> hub.asset);
-# dosya adını değiştirme. GitHub her dosyanın SHA-256 özetini API'de verir; Robz Hub indirdiğini onunla doğrular.
+# Robz Hub kendi güncellemesini bu sürümdeki dosyalardan alır (catalog.json -> hub.asset ve hub.linux):
+#   Windows  RobzHub-Setup-X.Y.Z.exe
+#   Linux    RobzHub-X.Y.Z-amd64.deb, RobzHub-X.Y.Z-x86_64.rpm, RobzHub-X.Y.Z-amd64.AppImage
+# Dosya adlarını değiştirme. Sabit adlar (RobzHub-Setup.exe, RobzHub-Linux-…) README ve web sitesindeki
+# ".../releases/latest/download/…" bağlantılarının hep en son sürümü vermesi içindir. GitHub her dosyanın SHA-256
+# özetini API'de verir; Robz Hub indirdiğini onunla doğrular.
 
 name: Sürüm
 
@@ -18,8 +22,31 @@ permissions:
   actions: write # sürümden sonra web sitesini yeniden yayınlamak için
 
 jobs:
-  release:
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.check.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Sürüm numaraları etiketle aynı mı
+        id: check
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          pkg=$(node -p "require('./package.json').version")
+          conf=$(node -p "require('./src-tauri/tauri.conf.json').version")
+          cargo=$(sed -n 's/^version = "\(.*\)"$/\1/p' src-tauri/Cargo.toml | head -n 1)
+          if [ "$tag" != "$pkg" ] || [ "$tag" != "$conf" ] || [ "$tag" != "$cargo" ]; then
+            echo "Etiket $tag; package.json $pkg, tauri.conf.json $conf, Cargo.toml $cargo" >&2
+            exit 1
+          fi
+          grep -qx "## $tag" CHANGELOG.md || { echo "CHANGELOG.md içinde '## $tag' başlığı yok" >&2; exit 1; }
+          echo "version=$tag" >> "$GITHUB_OUTPUT"
+
+  windows:
+    needs: version
     runs-on: windows-latest
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -30,53 +57,87 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
-
-      - name: Sürüm numaraları etiketle aynı mı
-        shell: pwsh
-        run: |
-          $tag = "${{ github.ref_name }}".TrimStart('v')
-          $pkg = (Get-Content package.json -Raw | ConvertFrom-Json).version
-          $conf = (Get-Content src-tauri/tauri.conf.json -Raw | ConvertFrom-Json).version
-          $cargo = (Select-String -Path src-tauri/Cargo.toml -Pattern '^version = "(.+)"' | Select-Object -First 1).Matches.Groups[1].Value
-          if ($tag -ne $pkg -or $tag -ne $conf -or $tag -ne $cargo) {
-            throw "Etiket $tag; package.json $pkg, tauri.conf.json $conf, Cargo.toml $cargo"
-          }
-          "VERSION=$tag" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
-
       - run: npm ci
       - run: npm test
       - run: npx tauri build
-
-      - name: Kurulum dosyasını adlandır ve özetini çıkar
+      - name: Kurulum dosyasını adlandır
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force out | Out-Null
           $setup = Get-ChildItem src-tauri/target/release/bundle/nsis/*-setup.exe | Select-Object -First 1
-          # Sürümlü ad Robz Hub'ın kendi güncellemesi içindir; sabit ad README ve web sitesindeki
-          # ".../releases/latest/download/RobzHub-Setup.exe" bağlantısının hep en son sürümü vermesi içindir.
-          $names = "RobzHub-Setup-$env:VERSION.exe", "RobzHub-Setup.exe"
-          foreach ($name in $names) { Copy-Item $setup.FullName "out/$name" }
-          $names | ForEach-Object { "$((Get-FileHash "out/$_" -Algorithm SHA256).Hash.ToLower())  $_" } |
-            Out-File out/SHA256SUMS.txt -Encoding ascii
+          foreach ($name in "RobzHub-Setup-$env:VERSION.exe", "RobzHub-Setup.exe") { Copy-Item $setup.FullName "out/$name" }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: out/*
+          if-no-files-found: error
 
-      - name: Sürüm notlarını CHANGELOG.md'den al
-        shell: pwsh
+  linux:
+    needs: version
+    # Eski bir glibc ile derlenen paket yeni dağıtımlarda da çalışır.
+    runs-on: ubuntu-22.04
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Sistem kitaplıkları
         run: |
-          $lines = Get-Content CHANGELOG.md -Encoding utf8
-          $start = [array]::IndexOf($lines, "## $env:VERSION")
-          if ($start -lt 0) { throw "CHANGELOG.md içinde '## $env:VERSION' başlığı yok" }
-          $notes = @()
-          for ($i = $start + 1; $i -lt $lines.Count -and -not $lines[$i].StartsWith('## '); $i++) { $notes += $lines[$i] }
-          ($notes -join "`n").Trim() | Out-File out/notes.md -Encoding utf8
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf file xdg-utils
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+      - run: npm ci
+      - run: npm test
+      - run: npx tauri build
+      - name: Paketleri adlandır
+        run: |
+          mkdir -p out
+          bundle=src-tauri/target/release/bundle
+          deb=$(ls "$bundle"/deb/*.deb | head -n 1)
+          rpm=$(ls "$bundle"/rpm/*.rpm | head -n 1)
+          appimage=$(ls "$bundle"/appimage/*.AppImage | head -n 1)
+          cp "$deb" "out/RobzHub-$VERSION-amd64.deb";            cp "$deb" out/RobzHub-Linux-amd64.deb
+          cp "$rpm" "out/RobzHub-$VERSION-x86_64.rpm";           cp "$rpm" out/RobzHub-Linux-x86_64.rpm
+          cp "$appimage" "out/RobzHub-$VERSION-amd64.AppImage";  cp "$appimage" out/RobzHub-Linux-amd64.AppImage
+          chmod +x out/*.AppImage
+          ls -la out
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux
+          path: out/*
+          if-no-files-found: error
 
+  publish:
+    needs: [version, windows, linux]
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: out
+          merge-multiple: true
+      - name: Özetler ve sürüm notları
+        run: |
+          cd out
+          sha256sum RobzHub-* > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+          cd ..
+          awk -v head="## $VERSION" '$0 == head { on = 1; next } on && /^## / { exit } on' CHANGELOG.md > out/notes.md
+          test -s out/notes.md
       - name: GitHub sürümünü oluştur
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh release create "${{ github.ref_name }}" out/RobzHub-Setup-${{ env.VERSION }}.exe out/RobzHub-Setup.exe out/SHA256SUMS.txt --title "Robz Hub ${{ env.VERSION }}" --notes-file out/notes.md
-
+        run: |
+          gh release create "$GITHUB_REF_NAME" out/RobzHub-* out/SHA256SUMS.txt \
+            --title "Robz Hub $VERSION" --notes-file out/notes.md
       # Bu iş akışının oluşturduğu sürüm başka iş akışlarını kendiliğinden tetiklemez (GitHub kuralı); sitedeki sürüm
       # numarası ve indirme boyutu yeni sürümle güncellensin diye site burada elle yeniden yayınlanır.
       - name: Web sitesini yeniden yayınla
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh workflow run pages.yml --ref main -R "${{ github.repository }}"
+        run: gh workflow run pages.yml --ref main -R "$GITHUB_REPOSITORY"
