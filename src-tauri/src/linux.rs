@@ -218,13 +218,20 @@ fn desktop_quote(path: &Path) -> String {
     out
 }
 
+/// AppImageLauncher kuruluysa (Arch'ta yaygın) başlatılan her AppImage'ın önüne geçip "tümleştir" diye sorar; kabul
+/// edilirse dosyayı ~/Applications'a taşır ve Robz Hub kurduğu uygulamayı yerinde bulamaz ("Kur" düğmesi geri gelir).
+/// Bu ortam değişkeniyle araya girmez; AppImageLauncher yoksa etkisi olmaz.
+pub const NO_APPIMAGELAUNCHER: (&str, &str) = ("APPIMAGELAUNCHER_DISABLE", "1");
+
 pub fn desktop_entry(def: &AppDef, exe: &Path, icon: Option<&Path>) -> String {
     let line = |s: &str| s.replace(['\n', '\r'], " ");
     let mut text = format!(
-        "[Desktop Entry]\nType=Application\nName={}\nComment={}\nComment[tr]={}\nExec={} %U\nTerminal=false\nCategories=Utility;\nX-Robz-Hub-App={}\n",
+        "[Desktop Entry]\nType=Application\nName={}\nComment={}\nComment[tr]={}\nExec=env {}={} {} %U\nTerminal=false\nCategories=Utility;\nX-Robz-Hub-App={}\n",
         line(&def.name),
         line(&def.tagline.en),
         line(&def.tagline.tr),
+        NO_APPIMAGELAUNCHER.0,
+        NO_APPIMAGELAUNCHER.1,
         desktop_quote(exe),
         def.id,
     );
@@ -383,7 +390,7 @@ mod tests {
         let def = catalog.app("robz-dpi").unwrap();
         let entry = desktop_entry(def, Path::new("/home/a b/.local/share/robz-hub/apps/robz-dpi/robz-dpi.AppImage"), None);
         assert!(entry.starts_with("[Desktop Entry]\nType=Application\nName=Robz DPI\n"));
-        assert!(entry.contains("Exec=\"/home/a b/.local/share/robz-hub/apps/robz-dpi/robz-dpi.AppImage\" %U\n"));
+        assert!(entry.contains("Exec=env APPIMAGELAUNCHER_DISABLE=1 \"/home/a b/.local/share/robz-hub/apps/robz-dpi/robz-dpi.AppImage\" %U\n"));
         assert!(!entry.contains("Icon="));
         assert_eq!(desktop_quote(Path::new("/x/$a\"b")), "\"/x/\\$a\\\"b\"");
     }
