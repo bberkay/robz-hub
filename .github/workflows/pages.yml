@@ -22,7 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+      url: ${{ steps.deployment.outputs.page_url || steps.retry1.outputs.page_url || steps.retry2.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -37,5 +37,24 @@ jobs:
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site/dist
+      # Yayına alma adımı, az önce yüklenen paketi GitHub henüz listelemediğinde "No artifacts named github-pages"
+      # hatasıyla düşebiliyor (0.1.8 yayınında oldu; site eski sürümde kaldı). Geçici bir durum: biraz bekleyip en çok
+      # iki kez yeniden denenir. Son deneme de başarısız olursa iş başarısız sayılır.
       - id: deployment
+        uses: actions/deploy-pages@v4
+        continue-on-error: true
+      - name: Yeniden denemeden önce bekle (30 sn)
+        if: steps.deployment.outcome == 'failure'
+        run: sleep 30
+      - id: retry1
+        name: Yayına almayı yeniden dene
+        if: steps.deployment.outcome == 'failure'
+        uses: actions/deploy-pages@v4
+        continue-on-error: true
+      - name: Son denemeden önce bekle (2 dk)
+        if: steps.retry1.outcome == 'failure'
+        run: sleep 120
+      - id: retry2
+        name: Yayına almayı son kez dene
+        if: steps.retry1.outcome == 'failure'
         uses: actions/deploy-pages@v4
