@@ -106,6 +106,10 @@ export function Settings() {
           ${data.portable && html`<p class="muted">${t('settings.portable.body', { dir: data.portable })}</p>`}
           <p>${t('settings.about.body')}</p>
           <p class="muted">${t('settings.about.disclaimer')}</p>
+          <p class="muted">
+            <a href="#" onClick=${(event) => { event.preventDefault(); actions.run('openLog'); }}>${t('settings.log')}</a>
+            ${' '}${t('settings.log.desc')}
+          </p>
           <ul class="about-links">
             ${links.github && html`<li><a href=${links.github}><${Icon} name="github" />${t('link.github')}</a></li>`}
             ${links.discord && html`<li><a href=${links.discord}><${Icon} name="discord" />${t('link.discord')}</a></li>`}

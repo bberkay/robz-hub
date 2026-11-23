@@ -14,12 +14,12 @@ use crate::error::{HubError, HubResult};
 use crate::github::{self, now_ms, Asset, FetchStatus, Release};
 use crate::installs::{self, InstallInfo};
 use crate::settings::Settings;
-use crate::{platform, shell, version};
+use crate::{log, platform, shell, version};
 use serde::Serialize;
 use serde_json::{json, Value};
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::path::PathBuf;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::{Duration, Instant};
 use tauri::{AppHandle, Emitter};
@@ -164,6 +164,12 @@ pub struct Hub {
     queue: mpsc::UnboundedSender<QueuedJob>,
     refresh_lock: tokio::sync::Mutex<()>,
     progress: Mutex<HashMap<String, Progress>>,
+    /// Arayüze giden durumun sıra numarası; her yayında artar.
+    seq: AtomicU64,
+    /// Durum sırayla yayınlansın diye: iki iş parçacığı aynı anda yayınlarsa eski durum sonra gidip yenisini ezmesin.
+    emit_lock: Mutex<()>,
+    /// Aynı anda tek kurulum algılaması çalışsın diye.
+    detect_lock: Mutex<()>,
 }
 
 fn derive(def: &AppDef, app: &mut AppState) {
@@ -256,7 +262,7 @@ impl Hub {
         let paths = Paths::new(data_dir);
         let client = reqwest::Client::builder()
             .user_agent(format!("RobzHub/{version}"))
-            .connect_timeout(Duration::from_secs(10))
+            .connect_timeout(Duration::from_secs(6))
             .build()
             .map_err(|e| HubError::with("unknown", e))?;
         let settings = Settings::load(&paths.settings);
@@ -297,6 +303,9 @@ impl Hub {
             queue,
             refresh_lock: tokio::sync::Mutex::new(()),
             progress: Mutex::new(HashMap::new()),
+            seq: AtomicU64::new(0),
+            emit_lock: Mutex::new(()),
+            detect_lock: Mutex::new(()),
         });
         {
             let mut inner = hub.lock();
@@ -314,6 +323,7 @@ impl Hub {
     pub fn snapshot(&self) -> Value {
         let inner = self.lock();
         json!({
+            "seq": self.seq.load(Ordering::SeqCst),
             "hubVersion": self.version,
             "dryRun": self.dry_run,
             "platform": platform::OS,
@@ -332,8 +342,14 @@ impl Hub {
         })
     }
 
+    /// Durum değişti: arayüze yeni durum gider. Durumlar sıra numarasıyla ve sırayla yayınlanır; arayüz küçük
+    /// numaralı (eski) durumu yok sayar.
     pub fn changed(&self) {
-        let _ = self.app.emit("hub:state", self.snapshot());
+        {
+            let _order = self.emit_lock.lock().unwrap_or_else(|p| p.into_inner());
+            self.seq.fetch_add(1, Ordering::SeqCst);
+            let _ = self.app.emit("hub:state", self.snapshot());
+        }
         shell::state_changed(self);
     }
 
@@ -394,6 +410,9 @@ impl Hub {
     /// Kurulum durumlarını (kayıt defteri, klasörler, exe sürümü) ve çalışan uygulamaları yeniden okur.
     /// Dönüş: bir şey değişti mi.
     fn detect_installs(&self) -> bool {
+        // Aynı anda tek algılama: iki algılama yarışırsa eski sonuç yenisinin üzerine yazılabilirdi (ör. kurulum biter
+        // bitmez, 5 sn'lik denetimin kurulumdan önce okuduğu "kurulu değil" sonucu).
+        let _one = self.detect_lock.lock().unwrap_or_else(|p| p.into_inner());
         let defs = self.lock().catalog.apps.clone();
         let detected: Vec<InstallInfo> = defs.iter().map(installs::detect).collect();
         // Çalışan süreçler kurulu exe'lerin adıyla aranır (kendiliğinden bulunanlarda exe adı katalogda yazmaz).
@@ -433,7 +452,9 @@ impl Hub {
             (stale, check_due)
         };
         if stale {
-            self.refresh_installs();
+            // Algılama diske ve süreç listesine bakar; pencereyi çizen ana iş parçacığını bekletmesin.
+            let hub = self.clone();
+            tauri::async_runtime::spawn_blocking(move || hub.refresh_installs());
         }
         if check_due {
             let hub = self.clone();
@@ -472,27 +493,40 @@ impl Hub {
         };
         self.changed();
 
+        // İstekler birbirini beklemez: GitHub'a ulaşılamıyorsa zaman aşımları üst üste binmesin. Önce katalog ile
+        // depo listesi (yeni Robz uygulamaları ve yıldızlar; saatte en çok bir kez) birlikte, sonra bütün sürüm
+        // listeleri ve Robz Hub'ın kendi sürümü birlikte istenir.
+        let (remote, (mut candidates, first_discovery)) = futures_util::future::join(
+            async {
+                if fetch_catalog {
+                    catalog::fetch_remote(&self.client, &self.paths.catalog_cache).await
+                } else {
+                    None
+                }
+            },
+            self.discover(),
+        )
+        .await;
         if fetch_catalog {
-            let remote = catalog::fetch_remote(&self.client, &self.paths.catalog_cache).await;
             let mut inner = self.lock();
             inner.catalog_fetched = Some(Instant::now());
             if let Some(remote) = remote.filter(|r| r.revision >= inner.catalog.revision) {
                 self.set_catalog(&mut inner, remote);
             }
+            // Yeni katalog adayı zaten içeriyorsa onun sürümleri aşağıda bir kez okunur.
+            candidates.retain(|c| !inner.catalog.apps.iter().any(|a| a.repo.eq_ignore_ascii_case(&c.repo)));
         }
-
-        // Yeni Robz uygulamaları ve yıldız sayıları (depo listesi saatte en çok bir kez sorulur).
-        let (candidates, first_discovery) = self.discover().await;
 
         let repos: Vec<(String, String)> =
             self.lock().catalog.apps.iter().map(|d| (d.id.clone(), d.repo.clone())).collect();
-        let (results, candidate_results) = futures_util::future::join(
+        let (results, candidate_results, ()) = futures_util::future::join3(
             futures_util::future::join_all(
                 repos.iter().map(|(_, repo)| github::fetch_releases(&self.client, repo, &self.paths.releases)),
             ),
             futures_util::future::join_all(
                 candidates.iter().map(|info| github::fetch_releases(&self.client, &info.repo, &self.paths.releases)),
             ),
+            self.refresh_self(),
         )
         .await;
         let found_now = self.add_found(&candidates, candidate_results);
@@ -522,7 +556,9 @@ impl Hub {
             }
         }
 
-        self.refresh_self().await;
+        if let Some(problem) = problem {
+            log::write(format!("GitHub denetimi: {problem}"));
+        }
         self.refresh_installs();
 
         let fresh: Vec<Value> = {
@@ -748,16 +784,27 @@ impl Hub {
                 JobKind::Install => self.run_install(&job).await,
                 JobKind::Uninstall => self.run_uninstall(&job).await,
             };
+            let what = if job.kind == JobKind::Install { "kur/güncelle" } else { "kaldır" };
+            // Önce kurulum durumu yeniden okunur, sonra iş kapanır: arayüz "iş bitti" ile "kuruldu"yu birlikte görür;
+            // arada "Kur" düğmesi yeniden belirmez.
+            self.detect_installs();
             match result {
                 Ok(notice) => {
+                    log::write(format!("{} {what}: tamam {notice}", job.id));
                     self.clear_job(&job.id);
                     self.notice(notice);
                 }
-                Err(error) if error.is("cancelled") => self.clear_job(&job.id),
-                Err(error) => self.update_job(&job.id, |j| {
-                    j.phase = "error";
-                    j.error = Some(error);
-                }),
+                Err(error) if error.is("cancelled") => {
+                    log::write(format!("{} {what}: iptal edildi", job.id));
+                    self.clear_job(&job.id);
+                }
+                Err(error) => {
+                    log::write(format!("{} {what}: HATA {error}", job.id));
+                    self.update_job(&job.id, |j| {
+                        j.phase = "error";
+                        j.error = Some(error);
+                    });
+                }
             }
             self.refresh_installs();
             let size = download::dir_size(&self.paths.downloads);

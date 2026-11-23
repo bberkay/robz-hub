@@ -8,12 +8,20 @@ sürüm notunu bu bölümden alır.
 <!-- tr -->
 - **Taşınabilir Windows sürümü.** RobzHub-Portable.exe kurulmadan çalışır: ayarlar, önbellek ve indirmeler exe'nin yanındaki RobzHub-Data klasöründe durur, bilgisayarda iz kalmaz. USB bellekte taşınabilir ve kendini de günceller. Ayarlar sayfasında "Taşınabilir" etiketi ve verilerin yeri görünür.
 - Web sitesinde Windows ziyaretçilerine taşınabilir sürümün bağlantısı da gösterilir.
+- **Düzeltme: açılışta uzun süren çark.** Linux'ta Robz Hub, GitHub'a yavaş ulaşılırken ya da ulaşılamazken yarım dakikaya kadar boş bir çarkta bekliyordu. Artık kayıtlı bilgilerle hemen açılır; GitHub denetimi arkada sürer ve daha kısa sürer. Açılış ekranında ne olduğunu söyleyen bir yazı da var.
+- **Düzeltme: "Kurulum klasörünü aç" ve bağlantılar Linux'ta çalışmıyordu.** Robz Hub AppImage olarak çalışırken başlattığı programlar (dosya yöneticisi, tarayıcı, kurduğun uygulamalar) onun paketindeki kitaplıkları yüklemeye çalışıp açılmıyordu. Artık temiz bir ortamla başlatılır.
+- **Düzeltme: kurulum bitince düğme bir an yeniden "Kur" görünebiliyordu.** Durum artık sırayla ve tek seferde güncellenir; eski bir durum yenisinin üzerine yazılamaz. Ekran 30 saniyede bir kendini de eşitler.
+- **Günlük dosyası.** Ayarlar › Hakkında'daki "Günlük dosyasını göster", kurulum hatalarının ayrıntısının yazıldığı robz-hub.log dosyasını açar; sorun bildirirken eklenir. Hiçbir yere gönderilmez.
 
 <!-- en -->
 <details><summary>English</summary>
 
 - **Portable Windows version.** RobzHub-Portable.exe runs without installing: settings, cache and downloads stay in the RobzHub-Data folder next to the exe and nothing is left on the PC. Carry it on a USB stick; it updates itself too. The Settings page shows a "Portable" label and where the data lives.
 - The website also shows Windows visitors a link to the portable version.
+- **Fix: long spinner at startup.** On Linux, Robz Hub could sit on an empty spinner for up to half a minute when GitHub was slow or unreachable. It now opens right away with what it already knows; the GitHub check continues in the background and takes less time. The startup screen also says what is happening.
+- **Fix: "Open install folder" and links did nothing on Linux.** When Robz Hub runs as an AppImage, the programs it starts (file manager, browser, the apps you install) tried to load the libraries inside its package and failed to open. They now start with a clean environment.
+- **Fix: after an install the button could briefly read "Install" again.** State now updates in order and in one step; an older state can no longer overwrite a newer one. The screen also resyncs every 30 seconds.
+- **Log file.** "Show the log file" under Settings › About opens robz-hub.log, where install errors are recorded in detail; attach it when reporting a problem. It is never sent anywhere.
 
 </details>
 <!-- end -->

@@ -1,10 +1,10 @@
 // Arayüzün girişi: Rust çekirdeğinden durumu alır, kabuğu (kenar çubuğu, üst çubuk, sayfa) çizer.
 import './bridge.js';
-import { html, render, useEffect, useRef } from '../vendor/preact-htm.js';
+import { html, render, useEffect, useRef, useState } from '../vendor/preact-htm.js';
 import { Icon } from './icons.js';
 import { lang, pick, t } from './i18n.js';
 import { imageUrl, relative } from './format.js';
-import { closeDialog, dismissToast, navigate, store, toast, update, useStore } from './store.js';
+import { applyState, closeDialog, dismissToast, navigate, store, toast, update, useStore } from './store.js';
 import * as actions from './actions.js';
 import { AppIcon, LanguageSelect, Spinner } from './components.js';
 import { Home } from './views/home.js';
@@ -238,12 +238,27 @@ function View() {
   return html`<${Home} />`;
 }
 
+// Açılış ekranı. Normalde bir saniyeden kısa görünür; uzarsa ne olduğunu söyler: ekranda yalnız bir çark kalmaz.
+function Loading() {
+  const [seconds, setSeconds] = useState(0);
+  useEffect(() => {
+    const timer = setInterval(() => setSeconds((s) => s + 1), 1000);
+    return () => clearInterval(timer);
+  }, []);
+  return html`<div class="loading" role="status" aria-live="polite">
+    <img class="loading-logo" src="/assets/hub/icon.png" width="56" height="56" alt="" />
+    <div class="loading-name">Robz Hub</div>
+    <div class="loading-text"><${Spinner} size=${14} />${t(seconds < 4 ? 'boot.loading' : 'boot.slow')}</div>
+    ${seconds >= 10 && html`<p class="loading-hint muted">${t('boot.stuck')}</p>`}
+  </div>`;
+}
+
 function App() {
   const { data } = useStore();
   useEffect(() => {
     if (data) document.documentElement.lang = lang();
   });
-  if (!data) return html`<div class="loading"><${Spinner} size=${20} /></div>`;
+  if (!data) return html`<${Loading} />`;
   return html`<div class="shell">
     <${Sidebar} />
     <div class="main">
@@ -281,7 +296,7 @@ function onNotice(notice) {
   }
 }
 
-window.hub.on('state', (data) => update({ data }));
+window.hub.on('state', applyState);
 window.hub.on('progress', (p) => update({ progress: { ...store.progress, [p.appId]: p } }));
 window.hub.on('notice', onNotice);
 window.hub.on('navigate', (route) => navigate(route));
@@ -307,7 +322,22 @@ document.addEventListener('contextmenu', (event) => {
 // "3 dakika önce" gibi göreli zamanlar güncel kalsın.
 setInterval(() => update({}), 60000);
 
+// Arayüzde yakalanmayan hatalar Robz Hub'ın günlüğüne yazılır (sorun bildirirken eklenir).
+window.addEventListener('error', (event) => window.hub.call('uiLog', `hata: ${event.message} (${event.filename}:${event.lineno})`));
+window.addEventListener('unhandledrejection', (event) => window.hub.call('uiLog', `reddedilen söz: ${event.reason}`));
+
 render(html`<${App} />`, document.getElementById('root'));
-window.hub.call('getState').then((result) => {
-  if (result.ok) update({ data: result.value });
-});
+
+// Durum iki yoldan gelir: değiştikçe 'state' olayıyla ve burada istenerek. İlk durum gelene kadar istek yinelenir;
+// sonrasında 30 sn'de bir eşitlenir: bir olay kaçarsa ekran kendini düzeltir.
+async function syncState() {
+  const result = await window.hub.call('getState');
+  if (result.ok) applyState(result.value);
+}
+(async () => {
+  for (let attempt = 0; !store.data; attempt += 1) {
+    await syncState();
+    if (!store.data) await new Promise((resolve) => setTimeout(resolve, Math.min(400 * 2 ** attempt, 3000)));
+  }
+})();
+setInterval(syncState, 30000);

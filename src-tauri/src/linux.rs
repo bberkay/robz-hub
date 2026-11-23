@@ -25,13 +25,42 @@ use std::time::{Duration, SystemTime};
 const DPKG_STATUS: &str = "/var/lib/dpkg/status";
 const RPM_DBS: [&str; 2] = ["/var/lib/rpm", "/usr/lib/sysimage/rpm"];
 
-/// PATH içinde (ya da standart yerlerde) bir program.
+/// PATH içinde (ya da standart yerlerde) bir program. AppImage olarak çalışırken Robz Hub'ın kendi paketindeki
+/// klasörler atlanır: aranan, sistemin programıdır.
 pub fn find_program(name: &str) -> Option<PathBuf> {
+    let appdir = std::env::var_os("APPDIR").filter(|d| !d.is_empty()).map(PathBuf::from);
     let dirs = std::env::var_os("PATH").map(|p| std::env::split_paths(&p).collect::<Vec<_>>()).unwrap_or_default();
     dirs.into_iter()
+        .filter(|dir| appdir.as_ref().is_none_or(|appdir| !dir.starts_with(appdir)))
         .chain(["/usr/bin", "/usr/local/bin", "/usr/sbin", "/bin", "/sbin"].map(PathBuf::from))
         .map(|dir| dir.join(name))
         .find(|p| p.is_file())
+}
+
+/// Bir klasörü ya da bağlantıyı sistemin varsayılan programıyla açar (dosya yöneticisi, tarayıcı). Program Robz
+/// Hub'ın temizlenmiş ortamıyla başlar; yoksa AppImage'ın kitaplıklarını yüklemeye çalışıp açılmaz.
+pub fn open_with_system(target: &str) -> HubResult<()> {
+    let (program, args): (PathBuf, &[&str]) = if let Some(xdg) = find_program("xdg-open") {
+        (xdg, &[])
+    } else if let Some(gio) = find_program("gio") {
+        (gio, &["open"])
+    } else {
+        return Err(HubError::with("open-failed", "xdg-open bulunamadı"));
+    };
+    let mut command = std::process::Command::new(program);
+    command.args(args).arg(target);
+    command.stdin(std::process::Stdio::null()).stdout(std::process::Stdio::null()).stderr(std::process::Stdio::null());
+    crate::platform::clean_env(&mut command);
+    let mut child = command.spawn().map_err(|e| HubError::with("open-failed", e))?;
+    // xdg-open işini yapıp çıkar; zombi kalmasın diye beklenir. Açamadıysa (ör. varsayılan dosya yöneticisi yok)
+    // nedeni günlüğe yazılır.
+    let target = target.to_string();
+    std::thread::spawn(move || match child.wait() {
+        Ok(status) if !status.success() => crate::log::write(format!("açılamadı ({status}): {target}")),
+        Err(error) => crate::log::write(format!("açılamadı ({error}): {target}")),
+        Ok(_) => {}
+    });
+    Ok(())
 }
 
 /// "1:0.2.0-1" -> "0.2.0": dönem (epoch) ve paket revizyonu atılır.
@@ -100,7 +129,9 @@ fn rpm_version(package: &str) -> Option<String> {
             _ => *cache = Some((modified, HashMap::new())),
         }
     }
-    let output = std::process::Command::new("rpm").args(["-q", "--qf", "%{VERSION}", package]).output().ok();
+    let mut command = std::process::Command::new(find_program("rpm").unwrap_or_else(|| PathBuf::from("rpm")));
+    crate::platform::clean_env(&mut command);
+    let output = command.args(["-q", "--qf", "%{VERSION}", package]).output().ok();
     let found = output.filter(|o| o.status.success()).map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string());
     let found = found.filter(|v| !v.is_empty());
     if let Some((_, map)) = CACHE.lock().unwrap_or_else(|p| p.into_inner()).as_mut() {
@@ -294,6 +325,7 @@ async fn run_as_admin(code: &str, program: PathBuf, args: Vec<String>) -> HubRes
     let pkexec = find_program("pkexec").ok_or_else(|| HubError::with(code, "pkexec bulunamadı"))?;
     let env = find_program("env").unwrap_or_else(|| PathBuf::from("/usr/bin/env"));
     let mut command = tokio::process::Command::new(pkexec);
+    crate::platform::clean_env_async(&mut command);
     command.arg(env).arg("DEBIAN_FRONTEND=noninteractive").arg(program).args(&args).kill_on_drop(true);
     let output = tokio::time::timeout(Duration::from_secs(20 * 60), command.output())
         .await

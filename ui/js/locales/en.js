@@ -30,6 +30,9 @@ export default {
 
   'status.notInstalled': 'Not installed',
   'status.installed': 'Installed',
+  'boot.loading': 'Opening…',
+  'boot.slow': 'Reading your apps; almost ready.',
+  'boot.stuck': 'This is taking longer than usual. If it does not open, close Robz Hub and open it again; if it keeps happening, tell us on Discord.',
   'status.upToDate': 'Up to date',
   'status.unsupported.windows': 'Not available on Windows',
   'status.unsupported.windows.title': 'This app has no Windows version.',
@@ -83,6 +86,7 @@ export default {
   'error.launch-failed': 'The app could not be launched.',
   'error.unknown': 'Something unexpected went wrong.',
   'error.unsupported': "This app can't be installed on this system.",
+  'error.open-failed': "Couldn't open it: no default file manager or browser was found on this system.",
   'error.auth-cancelled': 'Administrator permission was not given; nothing changed.',
   'error.detail': 'Details: {detail}',
 
@@ -172,6 +176,8 @@ export default {
   'settings.language.desc': 'The language of Robz Hub itself. Each app has its own language setting.',
   'settings.language.auto': 'Windows language',
   'settings.language.auto.linux': 'System language',
+  'settings.log': 'Show the log file',
+  'settings.log.desc': 'Attach robz-hub.log when you report a problem.',
   'settings.portable': 'Portable',
   'settings.portable.body': 'Settings, cache and downloads live in the folder next to the exe: {dir}',
   'settings.startup': 'Startup and window',

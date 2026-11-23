@@ -20,6 +20,7 @@ mod github;
 mod hub;
 mod installs;
 mod linux;
+mod log;
 mod platform;
 mod settings;
 mod shell;
@@ -45,7 +46,18 @@ fn open_external(app: &AppHandle, url: &str) -> HubResult<()> {
     if !url.starts_with("https://") || url.chars().any(|c| c.is_whitespace() || c == '"') {
         return Err(HubError::new("bad-request"));
     }
-    app.opener().open_url(url, None::<&str>).map_err(|e| HubError::with("unknown", e))
+    open_target(app, url, false)
+}
+
+/// Klasörü ya da bağlantıyı sistemin varsayılan programıyla açar. Linux'ta xdg-open temizlenmiş ortamla çağrılır
+/// (linux::open_with_system); Windows'ta Tauri'nin açıcısı kullanılır.
+fn open_target(app: &AppHandle, target: &str, is_path: bool) -> HubResult<()> {
+    if cfg!(target_os = "linux") {
+        return linux::open_with_system(target);
+    }
+    let opener = app.opener();
+    let result = if is_path { opener.open_path(target, None::<&str>) } else { opener.open_url(target, None::<&str>) };
+    result.map_err(|e| HubError::with("open-failed", e))
 }
 
 /// Robz Hub'ın kendi güncellemesi: kurulum sessizce yeni sürümü kurar, ardından Robz Hub yeniden açılır.
@@ -110,7 +122,9 @@ async fn run_self_update_linux(file: &Path) -> HubResult<()> {
         linux::install(file).await?;
         linux::find_program("robz-hub").ok_or_else(|| HubError::with("installer-failed", "robz-hub bulunamadı"))?
     };
-    std::process::Command::new("sh")
+    let mut command = std::process::Command::new("sh");
+    platform::clean_env(&mut command);
+    command
         .args(["-c", "sleep 2; exec \"$0\"", &target.display().to_string()])
         .spawn()
         .map(drop)
@@ -131,7 +145,7 @@ async fn dispatch(app: &AppHandle, hub: &Arc<Hub>, method: &str, args: &[Value])
         "stop" => hub.stop(&arg_str(args, 0)?).await?,
         "openFolder" => {
             if let Some(dir) = hub.install_dir(&arg_str(args, 0)?) {
-                app.opener().open_path(dir, None::<&str>).map_err(|e| HubError::with("unknown", e))?;
+                open_target(app, &dir, true)?;
             }
         }
         "openExternal" => open_external(app, &arg_str(args, 0)?)?,
@@ -140,6 +154,12 @@ async fn dispatch(app: &AppHandle, hub: &Arc<Hub>, method: &str, args: &[Value])
             let value = args.get(1).cloned().unwrap_or(Value::Null);
             if hub.set_setting(&key, &value) && key == "launchAtLogin" {
                 shell::apply_autostart(app, value.as_bool().unwrap_or(false));
+            }
+        }
+        "uiLog" => log::write(format!("arayüz: {}", arg_str(args, 0)?)),
+        "openLog" => {
+            if let Some(dir) = log::path().and_then(Path::parent) {
+                open_target(app, &dir.display().to_string(), true)?;
             }
         }
         "clearCache" => hub.clear_cache().await,
@@ -191,6 +211,15 @@ fn main() {
                     let _ = std::fs::remove_file(old_exe(&exe));
                 }
             }
+            log::init(data_dir.join("robz-hub.log"));
+            log::write(format!(
+                "Robz Hub {} açıldı: {}{}{}{}",
+                app.package_info().version,
+                platform::OS,
+                platform::linux_format().map(|f| format!(", paket biçimi {f:?}")).unwrap_or_default(),
+                if platform::appimage_path().is_some() { ", AppImage" } else { "" },
+                if portable.is_some() { ", taşınabilir" } else { "" },
+            ));
             let (hub, jobs) = Hub::new(app.handle().clone(), data_dir, dry_run)?;
             app.manage(hub.clone());
             hub.refresh_installs();

@@ -13,6 +13,12 @@ export function AppIcon({ def, size = 40 }) {
   const src = imageUrl(def.icon);
   const [failed, setFailed] = useState(false);
   useEffect(() => setFailed(false), [src]);
+  // Yüklenemeyen simge (ör. açılışta internet yokken) yarım dakika sonra yeniden denenir.
+  useEffect(() => {
+    if (!failed) return undefined;
+    const timer = setTimeout(() => setFailed(false), 30000);
+    return () => clearTimeout(timer);
+  }, [failed]);
   if (!src || failed) {
     const letters = def.name
       .split(/\s+/)

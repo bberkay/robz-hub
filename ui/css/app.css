@@ -7,9 +7,32 @@
 }
 
 .loading {
-  display: grid;
-  place-items: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
   height: 100vh;
+  padding: 24px;
+  text-align: center;
+}
+.loading-logo {
+  border-radius: 14px;
+}
+.loading-name {
+  font-size: 18px;
+  font-weight: 700;
+}
+.loading-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--fg-muted);
+}
+.loading-hint {
+  max-width: 420px;
+  margin-top: 6px;
+  font-size: 13px;
 }
 
 .sidebar {

@@ -30,6 +30,9 @@ export default {
 
   'status.notInstalled': 'Kurulu değil',
   'status.installed': 'Kurulu',
+  'boot.loading': 'Açılıyor…',
+  'boot.slow': 'Uygulamalar okunuyor; birazdan hazır.',
+  'boot.stuck': "Bu normalden uzun sürdü. Açılmazsa Robz Hub'ı kapatıp yeniden aç; sorun sürerse Discord'dan haber ver.",
   'status.upToDate': 'Güncel',
   'status.unsupported.windows': "Windows'ta desteklenmiyor",
   'status.unsupported.windows.title': 'Bu uygulamanın Windows sürümü yok.',
@@ -83,6 +86,7 @@ export default {
   'error.launch-failed': 'Uygulama başlatılamadı.',
   'error.unknown': 'Beklenmeyen bir hata oluştu.',
   'error.unsupported': 'Bu uygulama bu sistemde kurulamaz.',
+  'error.open-failed': 'Açılamadı: sistemde varsayılan bir dosya yöneticisi ya da tarayıcı bulunamadı.',
   'error.auth-cancelled': 'Yönetici izni verilmedi; hiçbir şey değişmedi.',
   'error.detail': 'Ayrıntı: {detail}',
 
@@ -172,6 +176,8 @@ export default {
   'settings.language.desc': 'Robz Hub arayüzünün dili. Uygulamaların kendi dil ayarı ayrıdır.',
   'settings.language.auto': 'Windows dili',
   'settings.language.auto.linux': 'Sistem dili',
+  'settings.log': 'Günlük dosyasını göster',
+  'settings.log.desc': 'Bir sorun bildirirken robz-hub.log dosyasını ekle.',
   'settings.portable': 'Taşınabilir',
   'settings.portable.body': 'Ayarlar, önbellek ve indirmeler exe dosyasının yanındaki klasörde durur: {dir}',
   'settings.startup': 'Başlangıç ve pencere',

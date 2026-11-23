@@ -159,6 +159,79 @@ pub fn appimage_path() -> Option<std::path::PathBuf> {
     }
 }
 
+// ---- başlatılan programların ortamı ----------------------------------------------------------------------------------
+
+/// AppImage olarak çalışırken Robz Hub'ın ortamı kendi paketini gösterir: LD_LIBRARY_PATH, GTK_PATH, PATH,
+/// XDG_DATA_DIRS ve onlarcası paketin bağlandığı klasöre (APPDIR) işaret eder. Robz Hub'ın başlattığı bir program bunu
+/// devralırsa sistemin programı (dosya yöneticisi, tarayıcı, kurulan uygulama) Robz Hub'ın paketindeki eski kitaplıkları
+/// yüklemeye çalışır ve açılmaz. Bu işlev, başlatılacak programın ortamında yapılacak değişiklikleri verir:
+/// (ad, Some(yeni değer)) ya da (ad, None) = değişken kaldırılır. AppImage dışında boş döner.
+pub fn child_env() -> Vec<(String, Option<String>)> {
+    if !cfg!(target_os = "linux") {
+        return Vec::new();
+    }
+    let appdir = std::env::var("APPDIR").ok().filter(|d| !d.is_empty());
+    child_env_from(std::env::vars().collect(), appdir.as_deref())
+}
+
+pub fn child_env_from(vars: Vec<(String, String)>, appdir: Option<&str>) -> Vec<(String, Option<String>)> {
+    let Some(appdir) = appdir else { return Vec::new() };
+    let appdir = appdir.trim_end_matches('/');
+    // AppImage çalıştırıcısının ve GTK kancasının koyduğu, başka programı ilgilendirmeyen değişkenler.
+    const REMOVE: [&str; 6] = ["APPDIR", "APPIMAGE", "ARGV0", "OWD", "GTK_THEME", "GDK_BACKEND"];
+    let mut changes = Vec::new();
+    for (key, value) in vars {
+        if REMOVE.contains(&key.as_str()) {
+            changes.push((key, None));
+        } else if value.contains(appdir) {
+            // Yol listesinden paketin klasörünü gösteren girdiler atılır; geriye bir şey kalmazsa değişken kaldırılır.
+            let mut kept: Vec<&str> = value.split(':').filter(|part| !part.is_empty() && !part.starts_with(appdir)).collect();
+            // Kanca XDG_DATA_DIRS'e /usr/share ekler; değişken baştan boşsa sistemin varsayılanı geri gelsin.
+            if key == "XDG_DATA_DIRS" && kept == ["/usr/share"] {
+                kept.clear();
+            }
+            changes.push((key, (!kept.is_empty()).then(|| kept.join(":"))));
+        }
+    }
+    changes
+}
+
+/// AppImage olarak çalışırken Robz Hub'ın çalışma klasörü paketin içidir; başlatılan program orada kalmasın diye
+/// ev klasörü verilir. AppImage dışında None.
+fn child_dir(changes: &[(String, Option<String>)]) -> Option<std::path::PathBuf> {
+    if changes.is_empty() {
+        return None;
+    }
+    Some(std::env::var_os("HOME").filter(|h| !h.is_empty()).map_or_else(|| "/".into(), std::path::PathBuf::from))
+}
+
+/// Başlatılacak programın ortamını ve çalışma klasörünü temizler (std ve tokio komutları için).
+pub fn clean_env(command: &mut std::process::Command) {
+    let changes = child_env();
+    if let Some(dir) = child_dir(&changes) {
+        command.current_dir(dir);
+    }
+    for (key, value) in changes {
+        match value {
+            Some(value) => command.env(key, value),
+            None => command.env_remove(key),
+        };
+    }
+}
+
+pub fn clean_env_async(command: &mut tokio::process::Command) {
+    let changes = child_env();
+    if let Some(dir) = child_dir(&changes) {
+        command.current_dir(dir);
+    }
+    for (key, value) in changes {
+        match value {
+            Some(value) => command.env(key, value),
+            None => command.env_remove(key),
+        };
+    }
+}
+
 // ---- kurulum planı ----------------------------------------------------------------------------------------------------
 
 /// Uygulama bu sistemde nasıl kurulur (ya da neden kurulamaz). Karar sürümdeki dosyalara göre verilir: bir yol
@@ -248,6 +321,46 @@ mod tests {
         // Adı değiştirilse de yanındaki "portable" dosyası taşınabilir kipte tutar.
         let marker = |p: &Path| p.ends_with("portable");
         assert!(portable_dir_for(Path::new(r"E:\RobzHub.exe"), marker).is_some());
+    }
+
+    #[test]
+    fn cleans_the_appimage_environment_for_children() {
+        let appdir = "/tmp/.mount_RobzHuX";
+        let vars: Vec<(String, String)> = [
+            ("APPDIR", appdir),
+            ("APPIMAGE", "/home/a/RobzHub.AppImage"),
+            ("GTK_THEME", "Adwaita:light"),
+            ("LD_LIBRARY_PATH", "/tmp/.mount_RobzHuX/usr/lib/:/tmp/.mount_RobzHuX/usr/lib/x86_64-linux-gnu/"),
+            ("GTK_PATH", "/tmp/.mount_RobzHuX//usr/lib/gtk-3.0"),
+            ("PATH", "/tmp/.mount_RobzHuX/usr/bin/:/tmp/.mount_RobzHuX/bin/:/usr/local/bin:/usr/bin"),
+            ("XDG_DATA_DIRS", "/tmp/.mount_RobzHuX/usr/share/:/tmp/.mount_RobzHuX/usr/share:/usr/share:"),
+            ("HOME", "/home/a"),
+            ("DISPLAY", ":0"),
+        ]
+        .iter()
+        .map(|(k, v)| (k.to_string(), v.to_string()))
+        .collect();
+        let changes = child_env_from(vars.clone(), Some(appdir));
+        let get = |name: &str| changes.iter().find(|(k, _)| k == name).map(|(_, v)| v.clone());
+        assert_eq!(get("LD_LIBRARY_PATH"), Some(None));
+        assert_eq!(get("GTK_PATH"), Some(None));
+        assert_eq!(get("APPDIR"), Some(None));
+        assert_eq!(get("APPIMAGE"), Some(None));
+        assert_eq!(get("GTK_THEME"), Some(None));
+        assert_eq!(get("PATH"), Some(Some("/usr/local/bin:/usr/bin".to_string())));
+        assert_eq!(get("XDG_DATA_DIRS"), Some(None));
+        // Paketle ilgisi olmayan değişkenlere dokunulmaz.
+        assert_eq!(get("HOME"), None);
+        assert_eq!(get("DISPLAY"), None);
+        // Kullanıcının kendi veri klasörleri korunur.
+        let mut with_user = vars.clone();
+        with_user.retain(|(k, _)| k != "XDG_DATA_DIRS");
+        with_user.push(("XDG_DATA_DIRS".into(), "/tmp/.mount_RobzHuX/usr/share:/usr/share:/var/lib/flatpak/exports/share:/usr/local/share".into()));
+        let changes = child_env_from(with_user, Some(appdir));
+        let data = changes.iter().find(|(k, _)| k == "XDG_DATA_DIRS").unwrap().1.clone();
+        assert_eq!(data.as_deref(), Some("/usr/share:/var/lib/flatpak/exports/share:/usr/local/share"));
+        // AppImage değilse hiçbir şey değişmez.
+        assert!(child_env_from(vars, None).is_empty());
     }
 
     #[test]

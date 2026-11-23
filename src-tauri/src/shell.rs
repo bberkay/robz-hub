@@ -223,16 +223,26 @@ pub fn create_tray(app: &AppHandle, hub: &Hub) -> tauri::Result<()> {
 pub fn state_changed(hub: &Hub) {
     let installed: Vec<String> = hub.installed_apps().into_iter().map(|(id, _)| id).collect();
     let signature = format!("{}|{}", hub.language(), installed.join(","));
-    let mut last = TRAY_SIGNATURE.lock().unwrap_or_else(|p| p.into_inner());
-    if *last != signature {
-        if let Some(tray) = hub.app.tray_by_id(TRAY_ID) {
-            if let Ok(menu) = build_tray_menu(&hub.app, hub) {
-                let _ = tray.set_menu(Some(menu));
-                *last = signature;
-            }
+    // Menü ana iş parçacığında kurulur ve bu iş parçacığı onu bekler. Beklerken kilit tutulmaz: ana iş parçacığı
+    // aynı anda buraya girerse iki taraf birbirini beklerdi.
+    let rebuild = {
+        let mut last = TRAY_SIGNATURE.lock().unwrap_or_else(|p| p.into_inner());
+        let differs = *last != signature;
+        if differs {
+            *last = signature;
+        }
+        differs
+    };
+    if rebuild {
+        let done = hub.app.tray_by_id(TRAY_ID).is_some_and(|tray| match build_tray_menu(&hub.app, hub) {
+            Ok(menu) => tray.set_menu(Some(menu)).is_ok(),
+            Err(_) => false,
+        });
+        if !done {
+            // Tepsi henüz yok ya da menü kurulamadı: bir sonraki değişiklikte yeniden denensin.
+            TRAY_SIGNATURE.lock().unwrap_or_else(|p| p.into_inner()).clear();
         }
     }
-    drop(last);
     update_taskbar(hub);
 }
 

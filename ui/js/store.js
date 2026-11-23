@@ -1,9 +1,10 @@
 // Arayüzün tek durum deposu. Ana süreçten gelen durum (data), indirme ilerlemesi, açık sayfa (route),
 // bildirim baloncukları (toasts) ve onay penceresi (dialog) burada tutulur.
-import { useEffect, useState } from '../vendor/preact-htm.js';
+import { useLayoutEffect, useState } from '../vendor/preact-htm.js';
 
 const listeners = new Set();
 let toastId = 0;
+let version = 0; // her güncellemede artar
 
 export const store = {
   data: null,
@@ -16,14 +17,28 @@ export const store = {
 
 export function update(patch) {
   Object.assign(store, patch);
+  version += 1;
   for (const listener of listeners) listener();
+}
+
+// Ana süreçten gelen durum. Her durumun bir sıra numarası (seq) vardır: geç gelen eski bir durum (ör. açılıştaki ilk
+// isteğin cevabı ya da sırası karışmış bir olay) yenisinin üzerine yazılmaz.
+export function applyState(data) {
+  if (!data || typeof data.seq !== 'number') return;
+  if (store.data && data.seq <= store.data.seq) return;
+  update({ data });
 }
 
 export function useStore() {
   const [, rerender] = useState(0);
-  useEffect(() => {
+  const seen = version;
+  // Dinleyici çizimle aynı anda kaydedilir (useLayoutEffect). useEffect bir sonraki kareye, en geç 100 ms sonraya
+  // ertelenir; o arada gelen güncelleme kaçardı. Linux'ta açılıştaki ilk durum 20 ms'de gelir: ekran, bir sonraki
+  // güncellemeye (GitHub denetiminin bitişine) kadar çarkta kalıyordu.
+  useLayoutEffect(() => {
     const listener = () => rerender((n) => n + 1);
     listeners.add(listener);
+    if (version !== seen) listener(); // çizim ile kayıt arasında bir güncelleme geldiyse
     return () => listeners.delete(listener);
   }, []);
   return store;

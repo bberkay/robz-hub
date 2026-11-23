@@ -7,7 +7,8 @@ const DICTS = { tr, en };
 
 export function lang() {
   const data = store.data;
-  if (!data) return 'tr';
+  // Durum gelmeden önce (açılış ekranı) tarayıcının dili.
+  if (!data) return (navigator.language || 'tr').toLowerCase().startsWith('tr') ? 'tr' : 'en';
   const setting = data.settings.language;
   return setting === 'auto' ? data.systemLanguage : setting;
 }

@@ -546,6 +546,7 @@ async fn taskkill(pids: &[u32], force: bool) {
         command
     } else {
         let mut command = tokio::process::Command::new("kill");
+        crate::platform::clean_env_async(&mut command);
         command.arg(if force { "-KILL" } else { "-TERM" });
         command.args(pids.iter().map(u32::to_string));
         command
@@ -663,6 +664,8 @@ pub fn launch(info: &InstallInfo) -> HubResult<()> {
     } else if let Some(home) = std::env::var_os("HOME") {
         command.current_dir(home);
     }
+    // Robz Hub AppImage olarak çalışıyorsa uygulama onun paketini gösteren ortamı devralmasın.
+    crate::platform::clean_env(&mut command);
     // AppImage FUSE ile açılır; FUSE yoksa (bazı en küçük kurulumlarda) kendini geçici klasöre açıp çalışır.
     if exe.ends_with(".AppImage") && !Path::new("/dev/fuse").exists() {
         command.env("APPIMAGE_EXTRACT_AND_RUN", "1");
