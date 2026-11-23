@@ -119,11 +119,16 @@ for (const subset of ['latin', 'latin-ext']) {
 }
 const appIcons = {};
 for (const app of catalog.apps) {
+  // https adresindeki simge (ör. uygulamanın kendi deposunda) olduğu gibi kullanılır
+  if (app.icon?.startsWith('https://')) appIcons[app.id] = app.icon;
   if (!app.icon?.startsWith('assets/')) continue;
   const file = `${app.id}${extname(app.icon)}`;
   cpSync(join(root, 'ui', app.icon), join(out, 'assets', 'apps', file));
   appIcons[app.id] = `assets/apps/${file}`;
 }
+
+// Uygulama simgesinin adresi: sitenin içindeki dosya ya da olduğu gibi https adresi.
+const iconSrc = (id, base) => (appIcons[id]?.startsWith('https://') ? appIcons[id] : `${base}${appIcons[id]}`);
 
 // ---- sayfa ----------------------------------------------------------------------------------------------------------
 
@@ -171,7 +176,7 @@ function appCard(app, t, base) {
   const highlights = (app.highlights || []).slice(0, 3);
   return `<article class="app" id="app-${app.id}">
       <header class="app-head">
-        ${appIcons[app.id] ? `<img class="app-icon" src="${base}${appIcons[app.id]}" width="64" height="64" alt="">` : ''}
+        ${appIcons[app.id] ? `<img class="app-icon" src="${iconSrc(app.id, base)}" width="64" height="64" alt="">` : ''}
         <div>
           <h3>${esc(app.name)}</h3>
           <p class="app-meta">
@@ -201,7 +206,7 @@ function bundleBox(bundle, t, base) {
   const members = bundle.apps.map((id) => catalog.apps.find((a) => a.id === id)).filter(Boolean);
   return `<aside class="bundle">
       <div class="bundle-icons" aria-hidden="true">
-        ${members.map((m) => `<img src="${base}${appIcons[m.id]}" width="56" height="56" alt="">`).join(`<span class="bundle-plus">${icon('plus', 18)}</span>`)}
+        ${members.map((m) => `<img src="${iconSrc(m.id, base)}" width="56" height="56" alt="">`).join(`<span class="bundle-plus">${icon('plus', 18)}</span>`)}
       </div>
       <div>
         <h3>${esc(pick(bundle.title, lang))}</h3>

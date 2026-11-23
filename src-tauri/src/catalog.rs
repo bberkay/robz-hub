@@ -387,7 +387,15 @@ mod tests {
     fn bundled_catalog_is_valid() {
         let catalog = parse_str(BUNDLED).expect("geçerli katalog");
         let ids: Vec<&str> = catalog.apps.iter().map(|a| a.id.as_str()).collect();
-        assert_eq!(ids, ["robz-play", "robz-vision"]);
+        assert_eq!(ids, ["robz-play", "robz-vision", "robz-dpi"]);
+        // Doğrulamadan geçemeyen kayıt sessizce düşer; dosyadaki her uygulama kabul edilmiş olmalı.
+        let raw: Value = serde_json::from_str(BUNDLED).unwrap();
+        assert_eq!(raw["apps"].as_array().unwrap().len(), catalog.apps.len(), "katalogda reddedilen bir uygulama var");
+        let dpi = catalog.app("robz-dpi").unwrap();
+        assert!(dpi.windows.asset_re.is_match("RobzDPI-Setup-0.1.0.exe"));
+        assert!(!dpi.windows.asset_re.is_match("RobzDPI-Setup.exe"));
+        assert_eq!(dpi.windows.default_dir.as_deref(), Some(r"%LOCALAPPDATA%\Robz DPI"));
+        assert!(dpi.icon.as_deref().is_some_and(|u| u.starts_with("https://")));
         assert_eq!(catalog.bundles.len(), 1);
         assert!(catalog.bundles[0].image.as_deref().is_some_and(|u| u.starts_with("https://")));
         let play = catalog.app("robz-play").unwrap();

@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "revision": 2,
+  "revision": 3,
   "hub": {
     "repo": "kutsalkiremitci/robz-hub",
     "asset": "^RobzHub-Setup-[0-9.]+\\.exe$"
@@ -201,6 +201,126 @@
         "uninstallKey": "{20358419-F95F-4F60-86CE-3AFF9A70B062}_is1",
         "defaultDir": "%LOCALAPPDATA%\\Programs\\Robz Vision",
         "exe": "RobzVision.exe"
+      }
+    },
+    {
+      "id": "robz-dpi",
+      "name": "Robz DPI",
+      "repo": "kutsalkiremitci/robz-dpi",
+      "license": "MIT",
+      "role": {
+        "tr": "DPI aracı",
+        "en": "DPI tool"
+      },
+      "tagline": {
+        "tr": "Yalnız seçtiğin sitelerde çalışan açık kaynak DPI aracı. Tek düğme; VPN değildir, hızı etkilemez.",
+        "en": "An open-source DPI tool that works only on the sites you choose. One button; it's not a VPN and doesn't slow you down."
+      },
+      "description": {
+        "tr": "Robz DPI, servis sağlayıcıların derin paket incelemesiyle (DPI) uyguladığı erişim kısıtlamalarının nasıl çalıştığını incelemek ve kendi bağlantında test etmek için yazıldı. Tek düğmeyle açılır ve yalnız seçtiğin sitelerde çalışır; Discord ve Roblox hazır gelir. Trafiğini bir sunucudan geçirmez, IP adresini gizlemez.",
+        "en": "Robz DPI was written to study how the access restrictions that internet providers apply with deep packet inspection (DPI) work, and to test them on your own connection. It turns on with one button and works only on the sites you choose; Discord and Roblox come ready. It doesn't route your traffic through a server or hide your IP address."
+      },
+      "highlights": [
+        {
+          "title": {
+            "tr": "Tek düğme",
+            "en": "One button"
+          },
+          "text": {
+            "tr": "Açılır ve kapanır. Windows yalnız ilk açılışta ve ayar değişikliğinde yönetici onayı ister.",
+            "en": "Turns on and off. Windows asks for administrator approval only on first start and when settings change."
+          }
+        },
+        {
+          "title": {
+            "tr": "Yalnız seçili siteler",
+            "en": "Only the sites you choose"
+          },
+          "text": {
+            "tr": "Discord ve Roblox hazır gelir; başka bir siteyi adresini yazarak eklersin. Diğer bağlantılara dokunmaz.",
+            "en": "Discord and Roblox come ready; add another site by typing its address. Other connections are left alone."
+          }
+        },
+        {
+          "title": {
+            "tr": "Dört yöntem, bağlantı testi",
+            "en": "Four methods, connection test"
+          },
+          "text": {
+            "tr": "Biri sonuç vermezse sıradakini seçersin; bağlantı testi sonucu hemen gösterir. Seçili sitelerin DNS sorguları da yönlendirilebilir.",
+            "en": "If one doesn't work, pick the next; the connection test shows the result right away. DNS queries for the chosen sites can be redirected too."
+          }
+        },
+        {
+          "title": {
+            "tr": "Açık kaynak, veri toplamaz",
+            "en": "Open source, no data collection"
+          },
+          "text": {
+            "tr": "Hesap, reklam ya da kullanım istatistiği yok. Arayüz Türkçe, İngilizce ve Rusça.",
+            "en": "No account, ads or usage statistics. The interface is in Turkish, English and Russian."
+          }
+        }
+      ],
+      "requirements": [
+        {
+          "tr": "Windows 10 ya da 11, 64 bit",
+          "en": "Windows 10 or 11, 64-bit"
+        },
+        {
+          "tr": "İlk açılışta yönetici onayı: bir Windows servisi ve WinDivert sürücüsü kurulur",
+          "en": "Administrator approval on first start: it installs a Windows service and the WinDivert driver"
+        },
+        {
+          "tr": "GoodbyeDPI gibi benzer bir araç çalışıyorsa önce kapatılmalı",
+          "en": "Close GoodbyeDPI or any similar tool first"
+        }
+      ],
+      "notice": {
+        "tr": "Eğitim ve test amaçlıdır; kullanmadan önce sorumluluk reddini oku. Bazı antivirüsler (Kaspersky başta) WinDivert sürücüsünü engelleyebilir.",
+        "en": "For education and testing; read the disclaimer before using it. Some antivirus programs (Kaspersky in particular) may block the WinDivert driver."
+      },
+      "icon": "https://raw.githubusercontent.com/kutsalkiremitci/robz-dpi/main/src-tauri/icons/128x128@2x.png",
+      "cover": "https://raw.githubusercontent.com/kutsalkiremitci/robz-dpi/main/docs/og-tr.png",
+      "screenshots": [
+        {
+          "url": "https://raw.githubusercontent.com/kutsalkiremitci/robz-dpi/main/docs/screenshots/tr/01-off.png",
+          "caption": {
+            "tr": "Kapalıyken: tek düğme ve seçili siteler.",
+            "en": "Off: one button and the chosen sites."
+          }
+        },
+        {
+          "url": "https://raw.githubusercontent.com/kutsalkiremitci/robz-dpi/main/docs/screenshots/tr/02-on.png",
+          "caption": {
+            "tr": "Açıkken: Discord ve Roblox için çalışıyor; uygulanan bağlantılar ve DNS sorguları sayılır.",
+            "en": "On: working for Discord and Roblox, counting the connections and DNS queries it handled."
+          }
+        },
+        {
+          "url": "https://raw.githubusercontent.com/kutsalkiremitci/robz-dpi/main/docs/screenshots/tr/06-terms.png",
+          "caption": {
+            "tr": "İlk açılış: sorumluluk reddinin özeti ve onay kutusu.",
+            "en": "First start: a summary of the disclaimer and the consent checkbox."
+          }
+        }
+      ],
+      "links": {
+        "website": "https://kutsalkiremitci.github.io/robz-dpi/",
+        "guide": "https://github.com/kutsalkiremitci/robz-dpi#kurulum"
+      },
+      "releaseNotes": {
+        "from": null,
+        "languages": [
+          "tr"
+        ]
+      },
+      "windows": {
+        "installer": "nsis",
+        "asset": "^RobzDPI-Setup-[0-9.]+\\.exe$",
+        "uninstallKey": "Robz DPI",
+        "defaultDir": "%LOCALAPPDATA%\\Robz DPI",
+        "exe": "RobzDPI.exe"
       }
     }
   ]
