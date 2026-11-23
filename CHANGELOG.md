@@ -3,6 +3,39 @@
 Her sürümün notları burada `## X.Y.Z` başlığı altında durur; sürüm iş akışı (.github/workflows/release.yml) GitHub
 sürüm notunu bu bölümden alır.
 
+## 0.1.5
+
+<!-- tr -->
+- **Yeni ana sayfa.** Üstte dönen bir tanıtım alanı var: GTA VI paketi ve duyurular. Tek düğmeyle iki uygulamayı birden kurar, günceller ya da başlatırsın. Altında kapak görselli uygulama kartları, bütün uygulamaların son sürümleri ve Topluluk bölümü yer alır.
+- **İlk duyurular Discord'da.** Yeni sürümler ve uygulamalar her zaman önce Discord sunucusunda duyurulur. Topluluk bölümünde Discord en üstte; "Sıradaki Robz uygulaması" kartı da Discord'a götürür. Canlı yayınlar Kick'te.
+- **Gerçek Discord ve Kick logoları** kenar çubuğunda, Ayarlar'da ve ana sayfada.
+- **Atlanan sürümlerin notları.** Robz Hub'ın birkaç sürümünü atladıysan, güncelleme kartı aradaki bütün sürümlerin notlarını gösterir; en yenisi üstte.
+- **Düzeltme:** GitHub'da yeni bir sürüm çıktığında "Güncelleme var", son sürüm ve indirme sayısı hemen yenilenir. 0.1.4'te bunlar, uygulamanın kurulumu değişene kadar eski kalabiliyordu.
+
+0.1.2 ile 0.1.4 arasında gelenler de bu sürümde:
+- Bayraklı dil seçimi.
+- GitHub indirme sayıları.
+- Uygulamanın kendi içinden yapılan güncellemeler birkaç saniyede görünür.
+- Kendini güncelledikten sonra indirdiği kurulum dosyasını siler.
+
+<!-- en -->
+<details><summary>English</summary>
+
+- **New home page.** At the top, a rotating promo area shows the GTA VI bundle and announcements. One button installs, updates or launches both apps at once. Below it are app cards with cover images, the latest releases of every app and a Community section.
+- **Announced first on Discord.** New releases and apps are always announced on the Discord server first. Discord is at the top of the Community section, and "The next Robz app" card links to Discord. Live streams are on Kick.
+- **Real Discord and Kick logos** in the sidebar, Settings and the home page.
+- **Notes for skipped versions.** If you skipped a few Robz Hub versions, the update card shows the notes of every version in between, newest first.
+- **Fix:** when a new release appears on GitHub, "Update available", the latest version and the download count refresh right away. In 0.1.4 they could stay stale until the app's installation changed.
+
+Also in this release, from 0.1.2 to 0.1.4:
+- A language picker with flags.
+- GitHub download counts.
+- Updates made inside an app show up within seconds.
+- Robz Hub deletes the installer it downloaded after updating itself.
+
+</details>
+<!-- end -->
+
 ## 0.1.4
 
 <!-- tr -->

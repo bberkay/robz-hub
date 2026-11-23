@@ -94,8 +94,13 @@ async function main() {
       }
       return false;
     };
-    const shot = async (name) => {
+    // top: görüntüden hemen önce sayfayı en üste getir (pencere öndeyken bir fare tekerleği onu kaydırabilir)
+    const shot = async (name, { top = false } = {}) => {
       await sleep(700);
+      if (top) {
+        await evaluate("document.querySelector('.content').scrollTo(0, 0)");
+        await sleep(100);
+      }
       const reply = await send('Page.captureScreenshot', { format: 'png' });
       fs.mkdirSync(outDir, { recursive: true });
       fs.writeFileSync(path.join(outDir, `${name}.png`), Buffer.from(reply.result.data, 'base64'));
@@ -115,14 +120,15 @@ async function main() {
     await send('Page.reload'); // dinleme açıkken baştan yükle: açılış hataları da görünsün
 
     if (!(await waitFor("document.querySelector('.shell') !== null"))) throw new Error(`arayüz açılmadı\n${logs.join('\n')}`);
-    await waitFor("document.querySelectorAll('.feed-item').length > 0", 20000);
+    await waitFor("document.querySelectorAll('.releases-list li').length > 0", 20000);
     await waitFor("document.querySelector('.topbar .spinner') === null", 20000);
     await evaluate("document.querySelectorAll('.toast .btn-icon').forEach((b) => b.click())");
 
     console.log(`ekran görüntüleri -> ${outDir}`);
     await evaluate("window.hub.call('setSetting', 'language', 'tr')");
     await sleep(300);
-    await shot('01-ana-sayfa');
+    await click('.sidebar .nav-item', 'Ana sayfa');
+    await shot('01-ana-sayfa', { top: true });
     await click('.sidebar .nav-item', 'Robz Vision');
     await shot('02-uygulama');
     await click('.tab', 'Sürüm notları');
@@ -134,7 +140,7 @@ async function main() {
     await evaluate("window.hub.call('setSetting', 'language', 'en')");
     await sleep(300);
     await click('.sidebar .nav-item', 'Home');
-    await shot('06-home-en');
+    await shot('06-home-en', { top: true });
     await evaluate("window.hub.call('setSetting', 'language', 'auto')");
 
     if (logs.length) console.log(`\nkonsol:\n${logs.join('\n')}`);

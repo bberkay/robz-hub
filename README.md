@@ -129,8 +129,8 @@ Robz Hub'ı güncellemeye gerek kalmadan bütün kullanıcıların listesinde be
   toplam indirme sayısı ve o an anlamlı olan düğmeler (**Kur**, **Güncelle**, **Başlat**, **Kapat**). Kartın **⋯**
   menüsünde: kurulum klasörünü aç, yeniden kur, web sitesi, GitHub deposu, sorun bildir ve **Kaldır**. Son kutu, sıradaki
   Robz uygulamasının yeri: yayınlanınca Robz Hub'ı güncellemeden burada belirir.
-- **Son sürümler** ve **Topluluk:** bütün uygulamaların en yeni sürümleri (tıklayınca notları açılır), Kick kanalı ve
-  Discord'daki ücretsiz kurulum desteği.
+- **Son sürümler** ve **Topluluk:** bütün uygulamaların en yeni sürümleri (tıklayınca notları açılır), ilk duyuruların
+  ve ücretsiz kurulum desteğinin yapıldığı Discord sunucusu, Kick kanalı.
 
 ### Uygulama sayfası
 
@@ -358,7 +358,8 @@ sayfasında gösterir.
 
 - **Kurulumda takıldın mı?** [Discord](https://discord.gg/UyyEn7SHm4) sunucusunda ücretsiz destek var.
 - **Hata mı buldun, bir fikrin mi var?** [Sorun bildir](https://github.com/kutsalkiremitci/robz-hub/issues).
-- **Yeni sürümler** önce [Kick'teki yayınlarda](https://kick.com/robzsogood) duyurulur.
+- **Yeni sürümler ve uygulamalar** her zaman ilk [Discord](https://discord.gg/UyyEn7SHm4) sunucusunda duyurulur;
+  canlı yayınlar [Kick'te](https://kick.com/robzsogood).
 - **Beğendiysen** depoya ⭐ vermen projeyi daha çok kişinin bulmasını sağlar.
 
 Katkılar açık: kod, çeviri ya da kataloğa yeni bir uygulama için pull request gönderebilirsin.

@@ -179,12 +179,12 @@ function AppCard({ def }) {
   </article>`;
 }
 
-function NextAppCard({ kick }) {
+function NextAppCard({ discord }) {
   return html`<article class="app-card app-card-next">
     <span class="app-card-next-icon"><${Icon} name="package" size=${22} /></span>
     <h3>${t('home.next.title')}</h3>
     <p class="muted">${t('home.next.body')}</p>
-    ${kick && html`<a class="app-card-next-link" href=${kick}><${Icon} name="kick" size=${14} />${t('home.next.link')}</a>`}
+    ${discord && html`<a class="app-card-next-link" href=${discord}><${Icon} name="discord" size=${14} />${t('home.next.link')}</a>`}
   </article>`;
 }
 
@@ -230,15 +230,6 @@ function RecentReleases() {
 
 function Community({ links }) {
   return html`<div class="community">
-    ${links.kick &&
-    html`<div class="community-row community-kick">
-      <${Icon} name="kick" size=${28} />
-      <div class="community-text">
-        <strong>${t('home.kick.title')}</strong>
-        <span class="muted">${t('home.kick.body')}</span>
-      </div>
-      <a class="btn btn-community" href=${links.kick}>${t('home.kick.action')}</a>
-    </div>`}
     ${links.discord &&
     html`<div class="community-row community-discord">
       <${Icon} name="discord" size=${28} />
@@ -247,6 +238,15 @@ function Community({ links }) {
         <span class="muted">${t('home.discord.body')}</span>
       </div>
       <a class="btn btn-community" href=${links.discord}>${t('home.discord.action')}</a>
+    </div>`}
+    ${links.kick &&
+    html`<div class="community-row community-kick">
+      <${Icon} name="kick" size=${28} />
+      <div class="community-text">
+        <strong>${t('home.kick.title')}</strong>
+        <span class="muted">${t('home.kick.body')}</span>
+      </div>
+      <a class="btn btn-community" href=${links.kick}>${t('home.kick.action')}</a>
     </div>`}
   </div>`;
 }
@@ -267,7 +267,7 @@ export function Home() {
       <h2 class="section-title">${t('home.apps')}</h2>
       <div class="app-cards">
         ${catalog.apps.map((def) => html`<${AppCard} def=${def} key=${def.id} />`)}
-        <${NextAppCard} kick=${catalog.links.kick} />
+        <${NextAppCard} discord=${catalog.links.discord} />
       </div>
     </section>
 

@@ -129,8 +129,8 @@ for every user without updating Robz Hub.
   downloads on GitHub and the buttons that make sense right now (**Install**, **Update**, **Launch**, **Close**). The
   card's **⋯** menu has: open install folder, reinstall, website, GitHub repository, report an issue and **Uninstall**.
   The last card is a place for the next Robz app: once released, it appears there without updating Robz Hub.
-- **Recent releases** and **Community:** the newest releases of every app (click one for its notes), the Kick channel
-  and free setup help on Discord.
+- **Recent releases** and **Community:** the newest releases of every app (click one for its notes), the Discord server
+  where everything is announced first (with free setup help) and the Kick channel.
 
 ### App page
 
@@ -355,7 +355,8 @@ notes to [`CHANGELOG.md`](CHANGELOG.md) and push a `vX.Y.Z` tag. The workflow bu
 
 - **Stuck installing?** There's free support on [Discord](https://discord.gg/UyyEn7SHm4).
 - **Found a bug or have an idea?** [Open an issue](https://github.com/kutsalkiremitci/robz-hub/issues).
-- **New releases** are announced first on [Kick streams](https://kick.com/robzsogood).
+- **New releases and apps** are always announced first on [Discord](https://discord.gg/UyyEn7SHm4); live streams
+  are on [Kick](https://kick.com/robzsogood).
 - **Like it?** A ⭐ on the repository helps more people find the project.
 
 Contributions are welcome: send a pull request for code, translations or a new app in the catalog.

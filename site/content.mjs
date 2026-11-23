@@ -127,7 +127,7 @@ export default {
     ],
 
     finalTitle: "Robz Hub'ı indir, gerisini o halletsin.",
-    finalText: 'Sorun yaşarsan ya da yeni bir uygulama önermek istersen Discord sunucusunda ücretsiz destek var.',
+    finalText: 'Yeni sürüm ve uygulamalar ilk Discord sunucusunda duyurulur. Sorun yaşarsan ya da yeni bir uygulama önermek istersen orada ücretsiz destek de var.',
     discord: 'Discord',
     kick: 'Kick',
     issues: 'Sorun bildir',
@@ -252,7 +252,7 @@ export default {
     ],
 
     finalTitle: 'Download Robz Hub and let it handle the rest.',
-    finalText: 'If something goes wrong or you want to suggest an app, there is free support on the Discord server.',
+    finalText: 'New releases and apps are announced first on the Discord server. If something goes wrong or you want to suggest an app, there is free support there too.',
     discord: 'Discord',
     kick: 'Kick',
     issues: 'Report an issue',
