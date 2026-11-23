@@ -666,9 +666,13 @@ pub fn launch(info: &InstallInfo) -> HubResult<()> {
     }
     // Robz Hub AppImage olarak çalışıyorsa uygulama onun paketini gösteren ortamı devralmasın.
     crate::platform::clean_env(&mut command);
-    // AppImage FUSE ile açılır; FUSE yoksa (bazı en küçük kurulumlarda) kendini geçici klasöre açıp çalışır.
-    if exe.ends_with(".AppImage") && !Path::new("/dev/fuse").exists() {
-        command.env("APPIMAGE_EXTRACT_AND_RUN", "1");
+    if exe.ends_with(".AppImage") {
+        // AppImageLauncher araya girip dosyayı taşımasın (linux.rs).
+        command.env(crate::linux::NO_APPIMAGELAUNCHER.0, crate::linux::NO_APPIMAGELAUNCHER.1);
+        // AppImage FUSE ile açılır; FUSE yoksa (bazı en küçük kurulumlarda) kendini geçici klasöre açıp çalışır.
+        if !Path::new("/dev/fuse").exists() {
+            command.env("APPIMAGE_EXTRACT_AND_RUN", "1");
+        }
     }
     #[cfg(windows)]
     command.creation_flags(DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP);
