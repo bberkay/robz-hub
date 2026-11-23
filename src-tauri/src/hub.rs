@@ -51,8 +51,13 @@ pub struct AppState {
     pub downloads: u64,
     /// Deponun GitHub yıldızı (sahibin depo listesinden; henüz okunmadıysa None).
     pub stars: Option<u64>,
-    /// Bu sistemde kurulabilir mi (Linux'ta yalnız paketi olan uygulamalar).
+    /// Bu sistemde kurulabilir mi.
     pub supported: bool,
+    /// Kurulamıyorsa nedeni: "os" (bu işletim sistemi için sürümü yok) ya da "distro" (Linux sürümü var ama bu
+    /// dağıtımda kurulamıyor).
+    pub unsupported: Option<platform::Unsupported>,
+    /// Bu sistemde kullanılan kurulum dosyasının adı için düzenli ifade (sürüm notlarında dosya boyutu için).
+    pub asset_pattern: Option<String>,
 }
 
 #[derive(Debug, Clone, Default, Serialize)]
@@ -162,21 +167,32 @@ pub struct Hub {
 }
 
 fn derive(def: &AppDef, app: &mut AppState) {
-    derive_with(def, app, platform::app_asset(def));
+    let plan = platform::plan(def, &app.install, &app.releases).map(|p| p.asset);
+    derive_with(app, plan);
 }
 
-/// `asset`: bu sistemde kurulum dosyasını seçen ifade; None ise uygulama bu sistemde kurulamaz.
-fn derive_with(def: &AppDef, app: &mut AppState, asset: Option<&regex::Regex>) {
-    app.supported = asset.is_some();
-    // Desteklenmeyen sistemde de son sürüm bilgi olarak gösterilir (Windows kurulum dosyasına göre).
-    let asset = asset.unwrap_or(&def.windows.asset_re);
-    app.latest = github::pick_latest(&app.releases, asset).map(|(r, a)| Latest {
-        version: r.version.clone(),
-        tag: r.tag.clone(),
-        published_at: r.published_at.clone(),
-        size: a.size,
-        verified: a.sha256.is_some(),
-    });
+/// `plan`: bu sistemde kurulum dosyasını seçen ifade ya da kurulamama nedeni.
+fn derive_with(app: &mut AppState, plan: Result<&regex::Regex, platform::Unsupported>) {
+    app.supported = plan.is_ok();
+    app.unsupported = plan.err();
+    app.asset_pattern = plan.ok().map(|re| re.as_str().to_string());
+    app.latest = match plan {
+        Ok(asset) => github::pick_latest(&app.releases, asset).map(|(r, a)| Latest {
+            version: r.version.clone(),
+            tag: r.tag.clone(),
+            published_at: r.published_at.clone(),
+            size: a.size,
+            verified: a.sha256.is_some(),
+        }),
+        // Bu sistemde kurulamasa da son sürüm bilgi olarak gösterilir.
+        Err(_) => app.releases.iter().find(|r| !r.prerelease).map(|r| Latest {
+            version: r.version.clone(),
+            tag: r.tag.clone(),
+            published_at: r.published_at.clone(),
+            size: 0,
+            verified: false,
+        }),
+    };
     app.update_available = app.supported
         && app.install.installed
         && matches!((&app.latest, &app.install.version), (Some(l), Some(v)) if version::compare(&l.version, v).is_gt());
@@ -363,6 +379,8 @@ impl Hub {
                 downloads: 0,
                 stars: None,
                 supported: false,
+                unsupported: None,
+                asset_pattern: None,
             });
             state.stars = inner.discovery.stars_of(&def.repo).or(state.stars);
             derive(def, &mut state);
@@ -562,7 +580,6 @@ impl Hub {
         }
         inner.discovery.checked_at = now;
         let listed: HashSet<String> = inner.discovery.repos.iter().map(|r| r.repo.to_ascii_lowercase()).collect();
-        inner.discovery.not_apps.retain(|repo, _| listed.contains(repo));
         inner.discovery.save(&self.paths.discovery);
         inner.found.retain(|d| listed.contains(&d.repo.to_ascii_lowercase()));
         let catalog = inner.catalog.clone();
@@ -573,41 +590,30 @@ impl Hub {
             .discovery
             .repos
             .iter()
-            .filter(|r| {
-                let key = r.repo.to_ascii_lowercase();
-                !known.contains(&key)
-                    && inner.discovery.not_apps.get(&key).is_none_or(|t| now.saturating_sub(*t) >= discover::RETRY_NOT_APP_MS)
-            })
+            .filter(|r| !known.contains(&r.repo.to_ascii_lowercase()))
             .cloned()
             .collect();
         (candidates, state.checked_at == 0)
     }
 
-    /// Yeni robz- depolarının sürüm listelerine bakar: Windows kurulum dosyası olanlar uygulama olarak eklenir.
+    /// Yeni robz- depolarını sürüm listeleriyle birlikte uygulama olarak ekler (adı sürüm adından gelir).
     /// Dönüş: eklenen uygulamalar ({ id, name }).
     fn add_found(&self, candidates: &[RepoInfo], results: Vec<github::FetchResult>) -> Vec<Value> {
         if candidates.is_empty() {
             return Vec::new();
         }
-        let now = now_ms();
         let mut added = Vec::new();
         let mut inner = self.lock();
         for (info, result) in candidates.iter().zip(results) {
             if !matches!(result.status, FetchStatus::Ok | FetchStatus::Cached | FetchStatus::Missing) {
                 continue; // internet ya da sınır: sonraki denetimde yeniden denenir
             }
-            match discover::app_def(info, &result.releases) {
-                Some(def) => {
-                    added.push(json!({ "id": def.id, "name": def.name }));
-                    inner.found.retain(|d| d.id != def.id);
-                    inner.found.push(def);
-                }
-                None => {
-                    inner.discovery.not_apps.insert(info.repo.to_ascii_lowercase(), now);
-                }
+            if let Some(def) = discover::app_def(info, &result.releases) {
+                added.push(json!({ "id": def.id, "name": def.name }));
+                inner.found.retain(|d| d.id != def.id);
+                inner.found.push(def);
             }
         }
-        inner.discovery.save(&self.paths.discovery);
         let catalog = inner.catalog.clone();
         self.set_catalog(&mut inner, catalog);
         added
@@ -806,17 +812,16 @@ impl Hub {
 
     /// Kur, güncelle ya da yeniden kur: hepsi en son sürümün kurulum dosyasını indirip sessizce çalıştırır.
     async fn run_install(&self, job: &QueuedJob) -> HubResult<Value> {
-        let (def, pick, keep, kind) = {
+        let def = self.lock().catalog.app(&job.id).cloned().ok_or_else(|| HubError::new("unknown-app"))?;
+        let installed = installs::detect(&def);
+        let (method, pick, keep, kind) = {
             let inner = self.lock();
-            let def = inner.catalog.app(&job.id).cloned().ok_or_else(|| HubError::new("unknown-app"))?;
-            let asset_re = platform::app_asset(&def).ok_or_else(|| HubError::new("unsupported"))?;
-            let pick = inner
-                .apps
-                .get(&job.id)
-                .and_then(|a| github::pick_latest(&a.releases, asset_re))
-                .map(|(r, a)| (r.clone(), a.clone()));
+            let releases = inner.apps.get(&job.id).map(|a| a.releases.as_slice()).unwrap_or_default();
+            // Bu sistemde hangi dosya, hangi yoldan (kuruluysa kurulduğu yoldan) kurulur.
+            let plan = platform::plan(&def, &installed, releases).map_err(|_| HubError::new("unsupported"))?;
+            let pick = github::pick_latest(releases, plan.asset).map(|(r, a)| (r.clone(), a.clone()));
             let kind = inner.jobs.get(&job.id).map(|j| j.kind).unwrap_or("install");
-            (def, pick, inner.settings.keep_installers, kind)
+            (plan.method, pick, inner.settings.keep_installers, kind)
         };
         let (release, asset) = pick.ok_or_else(|| HubError::new("no-release"))?;
         self.update_job(&job.id, |j| {
@@ -826,7 +831,7 @@ impl Hub {
         });
 
         let dir = self.paths.downloads.join(&def.id).join(tag_dir(&release.tag));
-        let result = self.download_and_install(job, &def, &asset, &dir).await;
+        let result = self.download_and_install(job, &def, &asset, &dir, method, &release.version).await;
         // İptalde ve başarılı kurulumda dosya silinir; hata olursa kalır (yeniden denemede tekrar inmez).
         if result.as_ref().map_or_else(|e| e.is("cancelled"), |_| !keep) {
             let _ = tokio::fs::remove_dir_all(&dir).await;
@@ -843,7 +848,15 @@ impl Hub {
         }))
     }
 
-    async fn download_and_install(&self, job: &QueuedJob, def: &AppDef, asset: &Asset, dir: &std::path::Path) -> HubResult<()> {
+    async fn download_and_install(
+        &self,
+        job: &QueuedJob,
+        def: &AppDef,
+        asset: &Asset,
+        dir: &std::path::Path,
+        method: platform::Method,
+        version: &str,
+    ) -> HubResult<()> {
         let id = job.id.as_str();
         let (file, verified) =
             download::download_asset(&self.client, asset, &def.repo, dir, &job.cancel, |p| self.on_progress(id, p)).await?;
@@ -856,7 +869,8 @@ impl Hub {
             tokio::time::sleep(Duration::from_millis(2500)).await;
             return Ok(());
         }
-        installs::run_installer(def, &file).await?;
+        let icon = if method == platform::Method::AppImage { self.app_icon(def).await } else { None };
+        installs::run_installer(def, &file, method, version, icon).await?;
         for _ in 0..20 {
             if installs::detect(def).installed {
                 return Ok(());
@@ -864,6 +878,29 @@ impl Hub {
             tokio::time::sleep(Duration::from_millis(500)).await;
         }
         Err(HubError::with("installer-failed", "kurulumdan sonra uygulama bulunamadı"))
+    }
+
+    /// Uygulamanın simgesi (AppImage'ın uygulama menüsü girişi için): Robz Hub'ın içindeki dosya ya da https adresi.
+    /// Yalnız PNG ve SVG; alınamazsa simgesiz giriş yazılır.
+    async fn app_icon(&self, def: &AppDef) -> Option<(Vec<u8>, &'static str)> {
+        let source = def.icon.as_deref()?;
+        let ext = if source.ends_with(".svg") {
+            "svg"
+        } else if source.ends_with(".png") {
+            "png"
+        } else {
+            return None;
+        };
+        let bytes = if let Some(local) = source.strip_prefix("assets/") {
+            self.app.asset_resolver().get(format!("assets/{local}"))?.bytes
+        } else {
+            let res = self.client.get(source).timeout(Duration::from_secs(10)).send().await.ok()?;
+            if !res.status().is_success() {
+                return None;
+            }
+            res.bytes().await.ok()?.to_vec()
+        };
+        (bytes.len() <= 1 << 20).then_some((bytes, ext))
     }
 
     async fn run_uninstall(&self, job: &QueuedJob) -> HubResult<Value> {
@@ -1047,6 +1084,8 @@ mod tests {
             downloads: 0,
             stars: None,
             supported: true,
+            unsupported: None,
+            asset_pattern: None,
         }
     }
 
@@ -1083,8 +1122,9 @@ mod tests {
         assert_eq!(app.downloads, 97);
 
         // Bu sistemde kurulamayan uygulama (ör. Linux'ta Robz Vision): son sürüm bilgi olarak görünür, güncelleme önerilmez.
-        derive_with(def, &mut app, None);
+        derive_with(&mut app, Err(platform::Unsupported::Distro));
         assert!(!app.supported);
+        assert_eq!(app.unsupported, Some(platform::Unsupported::Distro));
         assert_eq!(app.latest.as_ref().map(|l| l.version.as_str()), Some("1.6.0"));
         assert!(!app.update_available);
     }

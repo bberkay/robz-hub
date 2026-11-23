@@ -1,13 +1,13 @@
 {
   "schema": 1,
-  "revision": 4,
+  "revision": 5,
   "hub": {
     "repo": "kutsalkiremitci/robz-hub",
-    "asset": "^RobzHub-Setup-[0-9.]+\\.exe$",
+    "asset": "^RobzHub-Setup(-[0-9.]+)?\\.exe$",
     "linux": {
-      "deb": "^RobzHub-[0-9.]+-amd64\\.deb$",
-      "rpm": "^RobzHub-[0-9.]+-x86_64\\.rpm$",
-      "appimage": "^RobzHub-[0-9.]+-amd64\\.AppImage$"
+      "deb": "^RobzHub-(Linux|[0-9.]+)-amd64\\.deb$",
+      "rpm": "^RobzHub-(Linux|[0-9.]+)-x86_64\\.rpm$",
+      "appimage": "^RobzHub-(Linux|[0-9.]+)-amd64\\.AppImage$"
     }
   },
   "links": {
@@ -78,7 +78,7 @@
       ],
       "requirements": [
         { "tr": "PlayStation 5 (PS4 de olur), Uzaktan Oynama açık", "en": "PlayStation 5 (PS4 works too) with Remote Play enabled" },
-        { "tr": "Windows 10 ya da 11, 64 bit", "en": "Windows 10 or 11, 64-bit" },
+        { "tr": "Windows 10 ya da 11, ya da 64 bit Linux (systemd ve nftables ile)", "en": "Windows 10 or 11, or 64-bit Linux (with systemd and nftables)" },
         { "tr": "Vulkan destekli ayrı ekran kartı (NVIDIA GTX/RTX, AMD Radeon RX, Intel Arc)", "en": "A discrete graphics card with Vulkan (NVIDIA GTX/RTX, AMD Radeon RX, Intel Arc)" },
         { "tr": "PS5 ile bilgisayar aynı ev ağında", "en": "PS5 and PC on the same home network" },
         { "tr": "PlayStation hesabı", "en": "A PlayStation account" }
@@ -232,8 +232,8 @@
             "en": "One button"
           },
           "text": {
-            "tr": "Açılır ve kapanır. Windows yalnız ilk açılışta ve ayar değişikliğinde yönetici onayı ister.",
-            "en": "Turns on and off. Windows asks for administrator approval only on first start and when settings change."
+            "tr": "Açılır ve kapanır. Yönetici onayı yalnız ilk açılışta ve ayar değişikliğinde istenir.",
+            "en": "Turns on and off. Administrator approval is asked only on first start and when settings change."
           }
         },
         {
@@ -273,8 +273,8 @@
           "en": "Windows 10 or 11, 64-bit"
         },
         {
-          "tr": "İlk açılışta yönetici onayı: bir Windows servisi ve WinDivert sürücüsü kurulur",
-          "en": "Administrator approval on first start: it installs a Windows service and the WinDivert driver"
+          "tr": "İlk açılışta yönetici onayı: Windows'ta bir servis ve WinDivert sürücüsü, Linux'ta bir systemd servisi kurulur",
+          "en": "Administrator approval on first start: it installs a service and the WinDivert driver on Windows, a systemd service on Linux"
         },
         {
           "tr": "GoodbyeDPI gibi benzer bir araç çalışıyorsa önce kapatılmalı",
@@ -282,8 +282,8 @@
         }
       ],
       "notice": {
-        "tr": "Eğitim ve test amaçlıdır; kullanmadan önce sorumluluk reddini oku. Bazı antivirüsler (Kaspersky başta) WinDivert sürücüsünü engelleyebilir.",
-        "en": "For education and testing; read the disclaimer before using it. Some antivirus programs (Kaspersky in particular) may block the WinDivert driver."
+        "tr": "Eğitim ve test amaçlıdır; kullanmadan önce sorumluluk reddini oku. Windows'ta bazı antivirüsler (Kaspersky başta) WinDivert sürücüsünü engelleyebilir.",
+        "en": "For education and testing; read the disclaimer before using it. On Windows, some antivirus programs (Kaspersky in particular) may block the WinDivert driver."
       },
       "icon": "https://raw.githubusercontent.com/kutsalkiremitci/robz-dpi/main/src-tauri/icons/128x128@2x.png",
       "cover": "https://raw.githubusercontent.com/kutsalkiremitci/robz-dpi/main/docs/og-tr.png",
@@ -322,14 +322,14 @@
       },
       "windows": {
         "installer": "nsis",
-        "asset": "^RobzDPI-Setup-[0-9.]+\\.exe$",
+        "asset": "^RobzDPI-Setup(-[0-9.]+)?\\.exe$",
         "uninstallKey": "Robz DPI",
         "defaultDir": "%LOCALAPPDATA%\\Robz DPI",
         "exe": "RobzDPI.exe"
       },
       "linux": {
-        "deb": "^RobzDPI-[0-9.]+-amd64\\.deb$",
-        "rpm": "^RobzDPI-[0-9.]+-x86_64\\.rpm$",
+        "deb": "^RobzDPI-(Linux|[0-9.]+)-amd64\\.deb$",
+        "rpm": "^RobzDPI-(Linux|[0-9.]+)-x86_64\\.rpm$",
         "package": "robz-dpi",
         "exe": "robz-dpi"
       }

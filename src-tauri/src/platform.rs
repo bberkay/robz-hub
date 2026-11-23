@@ -1,10 +1,13 @@
-//! Robz Hub hangi sistemde çalışıyor ve o sistemde hangi kurulum dosyası kullanılır.
+//! Robz Hub hangi sistemde çalışıyor ve bir uygulama bu sistemde nasıl kurulur.
 //!
-//! Windows'ta her uygulamanın kurulum dosyası (.exe) vardır. Linux'ta yalnız katalogda "linux" bölümü olan uygulamalar
-//! kurulabilir; dosya, sistemin paket biçimine göre seçilir (Debian/Ubuntu: .deb, Fedora/openSUSE: .rpm). Diğerleri
-//! arayüzde "Linux'ta desteklenmiyor" görünür.
+//! Windows'ta uygulamanın kurulum programı (.exe) kullanılır. Linux'ta önce dağıtımın kendi paket biçimi denenir
+//! (Debian/Ubuntu ailesinde .deb, Fedora/openSUSE ailesinde .rpm); o yoksa ya da dağıtım başka bir aileden geliyorsa
+//! (Arch, Manjaro ve diğerleri) AppImage kullanılır. Hiçbiri yoksa uygulama "desteklenmiyor" görünür ve nedeni
+//! söylenir: bu işletim sistemi için hiç sürümü yok mu, yoksa Linux sürümü var da bu dağıtımda kurulamıyor mu.
 
 use crate::catalog::{AppDef, HubConf};
+use crate::github::{self, Release};
+use crate::installs::InstallInfo;
 use regex::Regex;
 use serde::Serialize;
 
@@ -25,7 +28,83 @@ pub enum LinuxFormat {
     Rpm,
 }
 
-/// Sistemin paket biçimi: dpkg veritabanı varsa .deb, rpm veritabanı varsa .rpm. Linux dışında None.
+/// Uygulamanın bu sistemde kurulma yolu.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Method {
+    /// Windows kurulum programı (Inno Setup ya da NSIS)
+    Windows,
+    /// Linux sistem paketi (pkexec ile paket yöneticisi)
+    Deb,
+    Rpm,
+    /// Linux'ta kullanıcının kendi klasörüne, parola istemeden
+    AppImage,
+}
+
+/// Bu sistemde kurulamama nedeni.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Unsupported {
+    /// Uygulamanın bu işletim sistemi için hiç sürümü yok.
+    Os,
+    /// Linux sürümü var ama bu dağıtımın kurabileceği biçimde değil (ör. Arch'ta yalnız .deb/.rpm).
+    Distro,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct Plan<'a> {
+    pub asset: &'a Regex,
+    pub method: Method,
+}
+
+// ---- Linux dağıtımı ---------------------------------------------------------------------------------------------------
+
+/// /etc/os-release'deki ID ve ID_LIKE değerlerine göre dağıtım ailesi.
+#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Family {
+    Deb,
+    Rpm,
+    /// Dağıtım belli ama .deb/.rpm ailesinden değil (Arch, Manjaro, NixOS, Void, Gentoo, Alpine…)
+    Other,
+    /// os-release okunamadı
+    Unknown,
+}
+
+#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
+const DEB_IDS: &[&str] = &[
+    "debian", "ubuntu", "linuxmint", "mint", "pop", "elementary", "zorin", "kali", "raspbian", "neon", "deepin", "pureos",
+    "devuan", "mx", "parrot", "tuxedo",
+];
+#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
+const RPM_IDS: &[&str] = &[
+    "fedora", "rhel", "centos", "rocky", "almalinux", "ol", "opensuse", "suse", "sles", "mageia", "openmandriva", "nobara",
+    "amzn", "ultramarine",
+];
+
+#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
+pub fn family_from_os_release(text: &str) -> Family {
+    let mut ids: Vec<String> = Vec::new();
+    for line in text.lines() {
+        let Some((key, value)) = line.split_once('=') else { continue };
+        if key.trim() == "ID" || key.trim() == "ID_LIKE" {
+            let value = value.trim().trim_matches(|c| c == '"' || c == '\'');
+            ids.extend(value.split_whitespace().map(str::to_ascii_lowercase));
+        }
+    }
+    if ids.is_empty() {
+        Family::Unknown
+    } else if ids.iter().any(|id| DEB_IDS.contains(&id.as_str())) {
+        Family::Deb
+    } else if ids.iter().any(|id| RPM_IDS.contains(&id.as_str()) || id.starts_with("opensuse")) {
+        Family::Rpm
+    } else {
+        Family::Other
+    }
+}
+
+/// Sistemin paket biçimi. Dağıtım ailesi os-release'den okunur, paket veritabanının varlığıyla doğrulanır; Arch gibi
+/// başka ailelerde (rpm aracı kurulu olsa bile) None. Linux dışında None.
 pub fn linux_format() -> Option<LinuxFormat> {
     #[cfg(target_os = "linux")]
     {
@@ -33,12 +112,19 @@ pub fn linux_format() -> Option<LinuxFormat> {
         use std::sync::OnceLock;
         static FORMAT: OnceLock<Option<LinuxFormat>> = OnceLock::new();
         *FORMAT.get_or_init(|| {
-            if Path::new("/var/lib/dpkg/status").is_file() {
-                Some(LinuxFormat::Deb)
-            } else if Path::new("/var/lib/rpm").is_dir() || Path::new("/usr/lib/sysimage/rpm").is_dir() {
-                Some(LinuxFormat::Rpm)
-            } else {
-                None
+            let release = ["/etc/os-release", "/usr/lib/os-release"]
+                .iter()
+                .find_map(|p| std::fs::read_to_string(p).ok())
+                .unwrap_or_default();
+            let dpkg = Path::new("/var/lib/dpkg/status").is_file();
+            let rpm = Path::new("/var/lib/rpm").is_dir() || Path::new("/usr/lib/sysimage/rpm").is_dir();
+            match family_from_os_release(&release) {
+                Family::Deb => dpkg.then_some(LinuxFormat::Deb),
+                Family::Rpm => rpm.then_some(LinuxFormat::Rpm),
+                Family::Other => None,
+                Family::Unknown if dpkg => Some(LinuxFormat::Deb),
+                Family::Unknown if rpm => Some(LinuxFormat::Rpm),
+                Family::Unknown => None,
             }
         })
     }
@@ -57,24 +143,58 @@ pub fn appimage_path() -> Option<std::path::PathBuf> {
     }
 }
 
-/// Bu sistemde uygulamanın kurulum dosyasını seçen ifade; kurulamıyorsa None.
-pub fn app_asset(def: &AppDef) -> Option<&Regex> {
-    // Testler her sistemde Windows davranışıyla çalışır; sisteme göre seçim app_asset_for ile ayrıca sınanır.
+// ---- kurulum planı ----------------------------------------------------------------------------------------------------
+
+/// Uygulama bu sistemde nasıl kurulur (ya da neden kurulamaz). Karar sürümdeki dosyalara göre verilir: bir yol
+/// ancak son kararlı sürümlerden birinde o dosya varsa seçilir. Kuruluysa aynı yoldan güncellenir: AppImage olarak
+/// kurulmuş bir uygulama paket olarak, paket olarak kurulmuş bir uygulama AppImage olarak yeniden kurulmaz.
+/// Henüz hiç sürüm yoksa (ya da sürüm listesi alınamadıysa) yalnız yapılandırmaya bakılır; arayüz "henüz sürüm yok" der.
+pub fn plan<'a>(def: &'a AppDef, install: &InstallInfo, releases: &[Release]) -> Result<Plan<'a>, Unsupported> {
+    // Testler her sistemde Windows davranışıyla çalışır; sisteme göre seçim plan_for ile ayrıca sınanır.
     let os = if cfg!(test) { "windows" } else { OS };
-    app_asset_for(def, os, linux_format())
+    plan_for(def, install.source, os, linux_format(), releases)
 }
 
-pub fn app_asset_for<'a>(def: &'a AppDef, os: &str, format: Option<LinuxFormat>) -> Option<&'a Regex> {
+pub fn plan_for<'a>(
+    def: &'a AppDef,
+    installed_from: Option<&str>,
+    os: &str,
+    format: Option<LinuxFormat>,
+    releases: &[Release],
+) -> Result<Plan<'a>, Unsupported> {
+    let released = releases.iter().any(|r| !r.prerelease);
+    let in_releases = |re: &Regex| github::pick_latest(releases, re).is_some();
+    let usable = |re: &Regex| !released || in_releases(re);
     match os {
-        "windows" => Some(&def.windows.asset_re),
+        "windows" => def
+            .windows
+            .as_ref()
+            .filter(|w| usable(&w.asset_re))
+            .map(|w| Plan { asset: &w.asset_re, method: Method::Windows })
+            .ok_or(Unsupported::Os),
         "linux" => {
-            let linux = def.linux.as_ref()?;
-            match format? {
-                LinuxFormat::Deb => linux.deb_re.as_ref(),
-                LinuxFormat::Rpm => linux.rpm_re.as_ref(),
-            }
+            let Some(linux) = &def.linux else { return Err(Unsupported::Os) };
+            let pick = |re: Option<&'a Regex>, method| re.filter(|re| usable(re)).map(|asset| Plan { asset, method });
+            let package = match format {
+                Some(LinuxFormat::Deb) => pick(linux.deb_re.as_ref(), Method::Deb),
+                Some(LinuxFormat::Rpm) => pick(linux.rpm_re.as_ref(), Method::Rpm),
+                None => None,
+            };
+            let appimage = pick(linux.appimage_re.as_ref(), Method::AppImage);
+            let chosen = if installed_from == Some("appimage") { appimage.or(package) } else { package.or(appimage) };
+            chosen.ok_or_else(|| {
+                // Linux için bir dosya var ama bu dağıtımın kurabileceği biçimde değil mi, yoksa hiç yok mu?
+                let any = [&linux.deb_re, &linux.rpm_re, &linux.appimage_re]
+                    .into_iter()
+                    .any(|re| re.as_ref().is_some_and(|re| in_releases(re)));
+                if any {
+                    Unsupported::Distro
+                } else {
+                    Unsupported::Os
+                }
+            })
         }
-        _ => None,
+        _ => Err(Unsupported::Os),
     }
 }
 
@@ -97,15 +217,73 @@ mod tests {
     use crate::catalog;
 
     #[test]
-    fn picks_the_package_for_the_system() {
+    fn reads_the_distribution_family() {
+        let arch = "NAME=\"Arch Linux\"\nID=arch\nBUILD_ID=rolling\n";
+        let manjaro = "NAME=\"Manjaro Linux\"\nID=manjaro\nID_LIKE=arch\n";
+        let ubuntu = "NAME=\"Ubuntu\"\nID=ubuntu\nID_LIKE=debian\n";
+        let mint = "ID=linuxmint\nID_LIKE=\"ubuntu debian\"\n";
+        let fedora = "NAME=\"Fedora Linux\"\nID=fedora\n";
+        let tumbleweed = "ID=\"opensuse-tumbleweed\"\nID_LIKE=\"opensuse suse\"\n";
+        assert_eq!(family_from_os_release(arch), Family::Other);
+        assert_eq!(family_from_os_release(manjaro), Family::Other);
+        assert_eq!(family_from_os_release(ubuntu), Family::Deb);
+        assert_eq!(family_from_os_release(mint), Family::Deb);
+        assert_eq!(family_from_os_release(fedora), Family::Rpm);
+        assert_eq!(family_from_os_release(tumbleweed), Family::Rpm);
+        assert_eq!(family_from_os_release(""), Family::Unknown);
+    }
+
+    fn release(files: &[&str]) -> Release {
+        Release {
+            id: 1,
+            tag: "v1.0.0".into(),
+            version: "1.0.0".into(),
+            name: "1.0.0".into(),
+            published_at: String::new(),
+            prerelease: false,
+            url: String::new(),
+            body: String::new(),
+            assets: files
+                .iter()
+                .map(|n| github::Asset { name: n.to_string(), size: 1, url: String::new(), sha256: None, downloads: 0 })
+                .collect(),
+        }
+    }
+
+    #[test]
+    fn picks_how_to_install_from_the_release_files() {
         let catalog = catalog::parse_str(catalog::BUNDLED).unwrap();
         let play = catalog.app("robz-play").unwrap();
         let dpi = catalog.app("robz-dpi").unwrap();
-        assert!(app_asset_for(play, "windows", None).is_some());
-        assert!(app_asset_for(play, "linux", Some(LinuxFormat::Deb)).is_none());
-        assert!(app_asset_for(dpi, "linux", Some(LinuxFormat::Deb)).unwrap().is_match("RobzDPI-0.2.0-amd64.deb"));
-        assert!(app_asset_for(dpi, "linux", Some(LinuxFormat::Rpm)).unwrap().is_match("RobzDPI-0.2.0-x86_64.rpm"));
-        assert!(app_asset_for(dpi, "linux", None).is_none());
-        assert!(app_asset_for(dpi, "other", None).is_none());
+        let method = |def, from, os, format, files: &[&str]| {
+            plan_for(def, from, os, format, &[release(files)]).map(|p| p.method)
+        };
+        let (deb, rpm) = (Some(LinuxFormat::Deb), Some(LinuxFormat::Rpm));
+        let windows_only = ["RobzPlay-Setup.exe"];
+        let dpi_files = ["RobzDPI-Setup.exe", "RobzDPI-Linux-amd64.deb", "RobzDPI-Linux-x86_64.rpm"];
+
+        assert_eq!(method(play, None, "windows", None, &windows_only), Ok(Method::Windows));
+        assert_eq!(method(play, None, "linux", deb, &windows_only), Err(Unsupported::Os));
+        assert_eq!(method(dpi, None, "linux", deb, &dpi_files), Ok(Method::Deb));
+        assert_eq!(method(dpi, None, "linux", rpm, &dpi_files), Ok(Method::Rpm));
+        // Arch: Linux sürümü var ama yalnız .deb/.rpm
+        assert_eq!(method(dpi, None, "linux", None, &dpi_files), Err(Unsupported::Distro));
+        assert_eq!(method(dpi, None, "other", None, &dpi_files), Err(Unsupported::Os));
+
+        // Sürüme AppImage eklenince katalog değişmeden: Arch'ta AppImage, Ubuntu'da yine .deb; AppImage olarak
+        // kuruluysa AppImage'la güncellenir.
+        let with_appimage = ["RobzDPI-Setup.exe", "RobzDPI-Linux-amd64.deb", "RobzDPI-0.3.0-x86_64.AppImage"];
+        assert_eq!(method(dpi, None, "linux", None, &with_appimage), Ok(Method::AppImage));
+        assert_eq!(method(dpi, None, "linux", deb, &with_appimage), Ok(Method::Deb));
+        assert_eq!(method(dpi, Some("appimage"), "linux", deb, &with_appimage), Ok(Method::AppImage));
+        // Fedora'da .rpm yok ama AppImage var
+        assert_eq!(method(dpi, None, "linux", rpm, &with_appimage), Ok(Method::AppImage));
+
+        // Yalnız Linux'ta çalışan uygulama: Windows'ta desteklenmez.
+        assert_eq!(method(play, None, "windows", None, &["RobzPlay-1.0.0-amd64.AppImage"]), Err(Unsupported::Os));
+        assert_eq!(method(play, None, "linux", None, &["RobzPlay-1.0.0-amd64.AppImage"]), Ok(Method::AppImage));
+
+        // Henüz sürüm yoksa yapılandırmaya göre (arayüz "henüz sürüm yok" der).
+        assert_eq!(plan_for(play, None, "windows", None, &[]).map(|p| p.method), Ok(Method::Windows));
     }
 }

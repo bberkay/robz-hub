@@ -64,14 +64,15 @@ function About({ def, app }) {
             <span class="muted fact-note">${dateLong(app.latest.publishedAt)}</span>
           </dd>
         </div>
-        <div>
+        ${app.supported &&
+        html`<div>
           <dt>${t('app.downloadSize')}</dt>
           <dd>
             ${bytes(app.latest.size)}
             ${app.latest.verified &&
             html`<span class="fact-verified" title=${t('app.verifiedHint')}><${Icon} name="shield" size=${14} /></span>`}
           </dd>
-        </div>`}
+        </div>`}`}
       ${app.downloads > 0 &&
       html`<div>
         <dt>${t('app.totalDownloads')}</dt>

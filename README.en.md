@@ -72,8 +72,21 @@
 > the picture to 60 FPS and Robz Vision translates the subtitles in that picture.
 
 The list comes from [`catalog.json`](catalog.json) on GitHub. When a new Robz app is added to the catalog, it appears
-for every user without updating Robz Hub. Even before it's in the catalog, a public GitHub repository starting with
-`robz-` joins the list on its own once it publishes a release with a Windows installer.
+for every user without updating Robz Hub. Even before it's in the catalog, every public GitHub repository starting
+with `robz-` shows up in the list on its own.
+
+Robz Hub looks at the files in each app's release and picks the one for your system; you see a single **Install**
+button:
+
+| System | File installed | If missing |
+|---|---|---|
+| Windows | `…Setup….exe` | **Not available on Windows** |
+| Debian, Ubuntu, Mint | `.deb` (else AppImage) | **Not available on Linux** |
+| Fedora, openSUSE | `.rpm` (else AppImage) | **Not available on Linux** |
+| Arch, Manjaro and others | AppImage | **Not available on this distribution** when there's only .deb/.rpm |
+
+If an app later publishes a new format (for example adds an AppImage to its release), Robz Hub uses it on the next
+check; the catalog doesn't change.
 
 ## What it does
 
@@ -106,8 +119,8 @@ for every user without updating Robz Hub. Even before it's in the catalog, a pub
     <td valign="top"><b>Downloads and stars</b><br>
       Each app's total downloads and stars on GitHub, on its page and on its home page card.</td>
     <td valign="top"><b>Runs on Linux too</b><br>
-      .deb, .rpm and AppImage. Apps with a Linux package install through your package manager; the rest say
-      <b>Not available on Linux</b>.</td>
+      .deb, .rpm and AppImage, on every distribution including Arch. Apps install from the file in their release;
+      ones without a file for your system say <b>not available</b>.</td>
   </tr>
   <tr>
     <td valign="top"><b>Small and fast</b><br>
@@ -140,10 +153,12 @@ sudo dnf install ./RobzHub-Linux-x86_64.rpm    # Fedora
 chmod +x RobzHub-Linux-amd64.AppImage && ./RobzHub-Linux-amd64.AppImage
 ```
 
-- On Linux, apps install as system packages; installing and uninstalling open your system's password prompt (pkexec).
-  Robz Hub never sees the password.
-- For now, **Robz DPI** is the app with a Linux package. Robz Play and Robz Vision run on Windows only and show **Not
-  available on Linux**.
+- On the Debian and Fedora families, apps install as system packages (.deb, .rpm); installing and uninstalling open
+  your system's password prompt (pkexec). Robz Hub never sees the password.
+- On Arch, Manjaro and other distributions, the app's AppImage is installed: no password, it goes into your own folder
+  (`~/.local/share/robz-hub/apps`) and into the app menu. Uninstalling removes both.
+- For now, **Robz DPI** is the app with a Linux version (.deb, .rpm and AppImage). Robz Play and Robz Vision run on
+  Windows only and show **Not available on Linux**.
 - Robz Hub updates itself too: the AppImage file is replaced, the .deb and .rpm go through your package manager.
 - The tray icon needs `libayatana-appindicator3` (the .deb and .rpm install it); without it Robz Hub runs without a
   tray icon.
@@ -326,12 +341,16 @@ If you build a Robz app, add an entry to the `apps` list in [`catalog.json`](cat
 the top. Running Robz Hubs pick up the new catalog within half an hour (or when **Check for updates** is pressed).
 
 **Automatic discovery.** You can also skip the catalog: Robz Hub lists the owner's public `robz-` repositories on
-GitHub at most once an hour, with a single request. A repository whose latest stable release has an `.exe` with
-`setup` or `install` in its name is added as an app; its name comes from the release name and its description from
-the repository. The registry key is found by name in Windows' installed apps list, and the installer type (Inno Setup
-or NSIS) is read from the downloaded file. If the release has a 64-bit `.deb` or `.rpm`, it installs on Linux too
-(the package and program are assumed to be named after the repository). Forks, archived repositories and Robz Hub
+GitHub at most once an hour, with a single request, and shows each as an app ("no release yet" until it has one). Its
+name comes from the release name and its description from the repository. Forks, archived repositories and Robz Hub
 itself are skipped. Once the repository is added to the catalog, the catalog entry wins.
+
+**Which file is used.** For any system the catalog doesn't spell out, default file names are looked for: on Windows
+an `.exe` with `setup` or `install` in its name, on Linux a `.deb`, `.rpm` or `.AppImage` with `amd64` or
+`x86_64` in its name. The decision follows the release's files, so a format the app adds later is used without
+changing the catalog. On Windows the registry key is found by name in the installed apps list and the installer type
+(Inno Setup or NSIS) is read from the downloaded file; on Linux the package and program are assumed to be named after
+the repository (Tauri's naming).
 
 <details>
 <summary><b>Catalog fields</b></summary>
@@ -350,8 +369,10 @@ itself are skipped. Once the repository is added to the catalog, the catalog ent
 | `windows.asset` | Regular expression for the installer's file name in a release (`^RobzPlay-Setup\\.exe$`). |
 | `windows.uninstallKey` | Key under `HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall` (Inno: `{AppId}_is1`). |
 | `windows.defaultDir`, `windows.exe` | Folder to check when there's no registry entry (`%LOCALAPPDATA%\Programs\…`) and the exe to run. |
-| `linux.deb`, `linux.rpm` | Regular expressions for the Linux packages' file names (`^RobzDPI-[0-9.]+-amd64\\.deb$`). Without them the app shows as not available on Linux. |
-| `linux.package`, `linux.exe` | Package name (`robz-dpi`) and the program name under `/usr/bin`. |
+| `linux.deb`, `linux.rpm`, `linux.appimage` | Regular expressions for the Linux files' names (`^RobzDPI-Linux-amd64\\.deb$`). Default names are used when missing. |
+| `linux.package`, `linux.exe` | Package name (`robz-dpi`) and the program name under `/usr/bin`; the repository name when missing. |
+
+At least one of the `windows` and `linux` sections is required; default file names are used for the other system.
 
 `bundles` (apps used together) and `announcements` (a new app, a stream, a Discord invite; `title`, `body`, `url`,
 `linkLabel`, `date`) rotate in the home page's featured area. Both take an `image` for the background; its left side sits
@@ -402,10 +423,10 @@ site/                website (generated from catalog.json)
 ```
 
 **Releasing:** set the same version in `package.json`, `src-tauri/Cargo.toml` and `src-tauri/tauri.conf.json`, add
-notes to [`CHANGELOG.md`](CHANGELOG.md) and push a `vX.Y.Z` tag. The workflow builds the Windows installer
-(`RobzHub-Setup-X.Y.Z.exe`, `RobzHub-Setup.exe`) and the Linux packages (`RobzHub-X.Y.Z-amd64.deb`,
-`RobzHub-X.Y.Z-x86_64.rpm`, `RobzHub-X.Y.Z-amd64.AppImage` plus fixed `RobzHub-Linux-…` names) and publishes them in
-one release; running Robz Hubs show the new version on the Updates page.
+notes to [`CHANGELOG.md`](CHANGELOG.md) and push a `vX.Y.Z` tag. The workflow builds four files and publishes them in
+one release: `RobzHub-Setup.exe` (Windows), `RobzHub-Linux-amd64.deb`, `RobzHub-Linux-x86_64.rpm` and
+`RobzHub-Linux-amd64.AppImage`, plus `SHA256SUMS.txt`. Each file has a single fixed name: links in the README and
+on the site always give the latest version, and running Robz Hubs update themselves from the same files.
 
 ## Support and contributing
 

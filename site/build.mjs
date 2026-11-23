@@ -15,12 +15,15 @@ const out = join(here, 'dist');
 const REPO = 'kutsalkiremitci/robz-hub';
 const SITE = 'https://kutsalkiremitci.github.io/robz-hub/';
 const REPO_URL = `https://github.com/${REPO}`;
-const DOWNLOAD = `${REPO_URL}/releases/latest/download/RobzHub-Setup.exe`;
-const LINUX = [
-  ['.deb', `${REPO_URL}/releases/latest/download/RobzHub-Linux-amd64.deb`],
-  ['.rpm', `${REPO_URL}/releases/latest/download/RobzHub-Linux-x86_64.rpm`],
-  ['AppImage', `${REPO_URL}/releases/latest/download/RobzHub-Linux-amd64.AppImage`],
-];
+// Sürümdeki dosyalar: her birinin tek, sabit adı var (release.yml). Site ziyaretçinin sistemine göre birini öne çıkarır.
+const FILES = {
+  windows: 'RobzHub-Setup.exe',
+  deb: 'RobzHub-Linux-amd64.deb',
+  rpm: 'RobzHub-Linux-x86_64.rpm',
+  appimage: 'RobzHub-Linux-amd64.AppImage',
+};
+const fileUrl = (name) => `${REPO_URL}/releases/latest/download/${name}`;
+const DOWNLOAD = fileUrl(FILES.windows);
 
 const catalog = JSON.parse(readFileSync(join(root, 'catalog.json'), 'utf8'));
 const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
@@ -82,7 +85,7 @@ async function github(path) {
   }
 }
 
-const live = { stars: null, hubVersion: pkg.version, hubSize: null, apps: {} };
+const live = { stars: null, hubVersion: pkg.version, sizes: {}, apps: {} };
 {
   const [repo, release, ...apps] = await Promise.all([
     github(`repos/${REPO}`),
@@ -92,7 +95,9 @@ const live = { stars: null, hubVersion: pkg.version, hubSize: null, apps: {} };
   if (repo) live.stars = repo.stargazers_count;
   if (release) {
     live.hubVersion = release.tag_name.replace(/^v/, '');
-    live.hubSize = release.assets.find((a) => a.name === 'RobzHub-Setup.exe')?.size ?? null;
+    for (const [kind, name] of Object.entries(FILES)) {
+      live.sizes[kind] = release.assets.find((a) => a.name === name)?.size ?? null;
+    }
   }
   catalog.apps.forEach((app, i) => {
     if (apps[i]) live.apps[app.id] = apps[i].tag_name.replace(/^v/, '');
@@ -221,15 +226,23 @@ function bundleBox(bundle, t, base) {
     </aside>`;
 }
 
+// Varsayılan düğme Windows içindir; site.js ziyaretçi Linux'taysa onu Linux dosyasına çevirir (Ubuntu/Debian'da .deb,
+// Fedora/SUSE'de .rpm, diğerlerinde AppImage) ve alttaki satırda öteki biçimleri gösterir.
 function downloadButtons(t, { big = false } = {}) {
+  const data = Object.entries(FILES)
+    .map(([kind, name]) => `data-${kind}-href="${fileUrl(name)}" data-${kind}-size="${esc(sizeText(live.sizes[kind], t.lang))}"`)
+    .join(' ');
+  const link = (kind, label) => `<a href="${fileUrl(FILES[kind])}" data-other="${kind}">${esc(label)}</a>`;
+  const dot = '<span aria-hidden="true"> · </span>';
   return `<div class="cta">
-      <a class="btn btn-primary ${big ? 'btn-xl' : 'btn-lg'}" href="${DOWNLOAD}" data-download>
-        ${icon('download', 18)}<span>${esc(t.download)}</span><span class="btn-meta" data-hub-size>${sizeText(live.hubSize, t.lang)}</span>
+      <a class="btn btn-primary ${big ? 'btn-xl' : 'btn-lg'}" href="${DOWNLOAD}" data-download ${data} data-linux-label="${esc(t.downloadLinux)}">
+        ${icon('download', 18)}<span data-download-label>${esc(t.download)}</span><span class="btn-meta" data-download-size>${sizeText(live.sizes.windows, t.lang)}</span>
       </a>
       <a class="btn btn-star ${big ? 'btn-xl' : 'btn-lg'}" href="${REPO_URL}" title="${esc(t.starTitle)}">
         ${icon('star', 18)}<span>${esc(t.star)}</span><span class="btn-count" data-stars ${live.stars == null ? 'hidden' : ''}>${live.stars ?? ''}</span>
       </a>
-      <p class="cta-linux">${esc(t.linux)} ${LINUX.map(([label, href]) => `<a href="${href}">${label}</a>`).join('<span aria-hidden="true"> · </span>')}</p>
+      <p class="cta-linux" data-other-formats>${esc(t.linux)} ${[link('deb', '.deb'), link('rpm', '.rpm'), link('appimage', 'AppImage')].join(dot)}</p>
+      <p class="cta-linux" data-other-formats-linux hidden>${esc(t.otherFormats)} ${[link('deb', t.debLabel), link('rpm', t.rpmLabel), link('appimage', t.appimageLabel), link('windows', 'Windows')].join(dot)}</p>
     </div>`;
 }
 

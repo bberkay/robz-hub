@@ -3,6 +3,31 @@
 Her sürümün notları burada `## X.Y.Z` başlığı altında durur; sürüm iş akışı (.github/workflows/release.yml) GitHub
 sürüm notunu bu bölümden alır.
 
+## 0.1.7
+
+<!-- tr -->
+- **Her Linux dağıtımında.** Robz Hub artık uygulamaların AppImage sürümlerini de kurar: Arch, Manjaro ve .deb/.rpm kullanmayan bütün dağıtımlarda. AppImage parola istemez, senin klasörüne yerleşir ve uygulama menüsüne eklenir; güncelleme ve kaldırma da Robz Hub'dan.
+- **Sistemine uyan dosya.** Robz Hub her uygulamanın sürümündeki dosyalara bakar ve tek bir "Kur" düğmesi gösterir: Windows'ta kurulum programı, Debian/Ubuntu'da .deb, Fedora/openSUSE'de .rpm, diğerlerinde AppImage. Uygun dosya yoksa nedeniyle yazar: "Windows'ta desteklenmiyor", "Linux'ta desteklenmiyor" ya da "Bu dağıtımda desteklenmiyor". Dağıtım artık doğru algılanır (Arch'ta rpm aracı kurulu olsa bile).
+- **Yeni biçimler kendiliğinden.** Bir uygulama sonradan yeni bir biçim yayınlarsa (ör. sürümüne AppImage eklerse) Robz Hub bir sonraki denetimde onu kullanır; Robz DPI'ın 0.3.0 AppImage'ı böylece Arch'ta kurulabiliyor.
+- **Bütün Robz uygulamaları listede.** GitHub'da robz- ile başlayan her uygulama, hangi sistemi desteklerse desteklesin listede görünür; henüz sürümü yoksa "henüz sürüm yok" der.
+- **Web sitesinde tek düğme.** Site ziyaretçinin sistemini tanır: Windows'ta kurulum dosyası, Linux'ta dağıtıma göre .deb, .rpm ya da AppImage; diğer biçimler altta.
+- **Sürümde tek dosya.** Her dosyanın tek, sabit adı var; aynı dosyanın sürüm numaralı kopyaları kaldırıldı.
+- **Düzeltme:** kendiliğinden bulunan bir uygulamanın sürüm notları sekmesi açılırken hata veriyordu.
+
+<!-- en -->
+<details><summary>English</summary>
+
+- **On every Linux distribution.** Robz Hub now installs apps' AppImage versions too: on Arch, Manjaro and every distribution that doesn't use .deb/.rpm. AppImages need no password, go into your own folder and into the app menu; updating and uninstalling work from Robz Hub as well.
+- **The file for your system.** Robz Hub looks at the files in each app's release and shows a single "Install" button: the installer on Windows, the .deb on Debian/Ubuntu, the .rpm on Fedora/openSUSE, the AppImage elsewhere. Without a suitable file it says why: "Not available on Windows", "Not available on Linux" or "Not available on this distribution". The distribution is now detected correctly (even on Arch with the rpm tool installed).
+- **New formats on their own.** If an app later publishes a new format (for example adds an AppImage to its release), Robz Hub uses it on the next check; this is how Robz DPI 0.3.0's AppImage installs on Arch.
+- **Every Robz app in the list.** Every GitHub app starting with robz- shows up whatever systems it supports; without a release yet it says "no release yet".
+- **One button on the website.** The site recognizes the visitor's system: the installer on Windows, the .deb, .rpm or AppImage on Linux depending on the distribution; other formats below.
+- **One file per format.** Each release file has a single fixed name; the version-numbered copies of the same files are gone.
+- **Fix:** the release notes tab of an automatically found app failed to open.
+
+</details>
+<!-- end -->
+
 ## 0.1.6
 
 <!-- tr -->

@@ -35,6 +35,14 @@ static LOCAL_IMAGE: LazyLock<Regex> = LazyLock::new(|| re(r"^assets/[A-Za-z0-9/_
 static PACKAGE: LazyLock<Regex> = LazyLock::new(|| re(r"^[a-z0-9][a-z0-9.+-]{0,62}$"));
 /// Linux'ta PATH içindeki program adı.
 static LINUX_EXE: LazyLock<Regex> = LazyLock::new(|| re(r"^[A-Za-z0-9._-]{1,60}$"));
+/// Kataloğa yazılmamış sistemler için dosya adları: adında "setup" ya da "install" geçen .exe; Linux için 64 bit .deb,
+/// .rpm ve AppImage. Robz Hub sürümdeki dosyalara bakar: uygulama bir gün AppImage yayınlarsa katalog değişmeden kurulur.
+pub const DEFAULT_WINDOWS: &str = r"(?i)^[A-Za-z0-9._ -]*(setup|install)[A-Za-z0-9._ -]*\.exe$";
+pub const DEFAULT_DEB: &str = r"(?i)^[A-Za-z0-9._ -]*(amd64|x86_64)[A-Za-z0-9._ -]*\.deb$";
+pub const DEFAULT_RPM: &str = r"(?i)^[A-Za-z0-9._ -]*(x86_64|amd64)[A-Za-z0-9._ -]*\.rpm$";
+pub const DEFAULT_APPIMAGE: &str = r"(?i)^[A-Za-z0-9._ -]*(x86_64|amd64)[A-Za-z0-9._ -]*\.AppImage$";
+static DEFAULT_RES: LazyLock<[Regex; 4]> =
+    LazyLock::new(|| [re(DEFAULT_WINDOWS), re(DEFAULT_DEB), re(DEFAULT_RPM), re(DEFAULT_APPIMAGE)]);
 static LINK_KEY: LazyLock<Regex> = LazyLock::new(|| re(r"^[a-z]{2,20}$"));
 static DATE: LazyLock<Regex> = LazyLock::new(|| re(r"^\d{4}-\d{2}-\d{2}$"));
 
@@ -85,19 +93,23 @@ pub struct WindowsConf {
     pub asset_re: Regex,
 }
 
-/// Linux paketi: .deb ve/veya .rpm dosyası, paket adı ve /usr/bin altındaki program adı. Yoksa uygulama Linux'ta
+/// Linux sürümü: .deb, .rpm ve/veya AppImage. .deb ve .rpm için paket adı ve /usr/bin altındaki program adı gerekir;
+/// AppImage her dağıtımda (Arch dahil) kullanıcının kendi klasörüne kurulur. Hiçbiri yoksa uygulama Linux'ta
 /// "desteklenmiyor" görünür.
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LinuxConf {
     pub deb: Option<String>,
     pub rpm: Option<String>,
-    pub package: String,
-    pub exe: String,
+    pub appimage: Option<String>,
+    pub package: Option<String>,
+    pub exe: Option<String>,
     #[serde(skip)]
     pub deb_re: Option<Regex>,
     #[serde(skip)]
     pub rpm_re: Option<Regex>,
+    #[serde(skip)]
+    pub appimage_re: Option<Regex>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -119,7 +131,8 @@ pub struct AppDef {
     pub screenshots: Vec<Screenshot>,
     pub links: BTreeMap<String, String>,
     pub release_notes: ReleaseNotesConf,
-    pub windows: WindowsConf,
+    /// Windows sürümü yoksa None (ör. yalnız Linux'ta çalışan bir uygulama).
+    pub windows: Option<WindowsConf>,
     pub linux: Option<LinuxConf>,
     /// Katalogda yok; GitHub'da robz- ile başlayan herkese açık bir depo olarak kendiliğinden bulundu (discover.rs).
     pub discovered: bool,
@@ -232,21 +245,89 @@ fn parse_linux(value: &Value) -> Option<LinuxConf> {
     if !value.is_object() {
         return None;
     }
-    let package = matches(&value["package"], &PACKAGE)?;
-    let exe = matches(&value["exe"], &LINUX_EXE)?;
-    let deb = pattern(&value["deb"]);
-    let rpm = pattern(&value["rpm"]);
-    if deb.is_none() && rpm.is_none() {
+    let package = matches(&value["package"], &PACKAGE);
+    let exe = matches(&value["exe"], &LINUX_EXE);
+    // Paket adı ve program adı olmadan .deb/.rpm kurulumu izlenemez; o durumda yalnız AppImage kullanılır.
+    let packaged = package.is_some() && exe.is_some();
+    let deb = pattern(&value["deb"]).filter(|_| packaged);
+    let rpm = pattern(&value["rpm"]).filter(|_| packaged);
+    let appimage = pattern(&value["appimage"]);
+    if deb.is_none() && rpm.is_none() && appimage.is_none() {
         return None;
     }
     Some(LinuxConf {
         deb: deb.as_ref().map(|(s, _)| s.clone()),
         rpm: rpm.as_ref().map(|(s, _)| s.clone()),
+        appimage: appimage.as_ref().map(|(s, _)| s.clone()),
         package,
         exe,
         deb_re: deb.map(|(_, r)| r),
         rpm_re: rpm.map(|(_, r)| r),
+        appimage_re: appimage.map(|(_, r)| r),
     })
+}
+
+/// Katalogda yazılmayan her sistem için varsayılan dosya adlarını ekler. Windows'ta kayıt anahtarı ve exe adı
+/// bilinmediğinden kurulum adıyla aranır (InstallerType::Auto); Linux'ta paket ve program adı depo adı sayılır.
+pub fn fill_defaults(def: &mut AppDef) {
+    let [windows_re, deb_re, rpm_re, appimage_re] = &*DEFAULT_RES;
+    if def.windows.is_none() {
+        def.windows = Some(WindowsConf {
+            installer: InstallerType::Auto,
+            asset: DEFAULT_WINDOWS.to_string(),
+            uninstall_key: String::new(),
+            default_dir: None,
+            exe: String::new(),
+            asset_re: windows_re.clone(),
+        });
+    }
+    let slug = def.repo.rsplit('/').next().unwrap_or_default().to_ascii_lowercase();
+    let linux = def.linux.get_or_insert_with(|| LinuxConf {
+        deb: None,
+        rpm: None,
+        appimage: None,
+        package: None,
+        exe: None,
+        deb_re: None,
+        rpm_re: None,
+        appimage_re: None,
+    });
+    if linux.package.is_none() && PACKAGE.is_match(&slug) {
+        linux.package = Some(slug.clone());
+    }
+    if linux.exe.is_none() && LINUX_EXE.is_match(&slug) {
+        linux.exe = Some(slug);
+    }
+    if linux.package.is_some() && linux.exe.is_some() {
+        if linux.deb_re.is_none() {
+            linux.deb = Some(DEFAULT_DEB.to_string());
+            linux.deb_re = Some(deb_re.clone());
+        }
+        if linux.rpm_re.is_none() {
+            linux.rpm = Some(DEFAULT_RPM.to_string());
+            linux.rpm_re = Some(rpm_re.clone());
+        }
+    }
+    if linux.appimage_re.is_none() {
+        linux.appimage = Some(DEFAULT_APPIMAGE.to_string());
+        linux.appimage_re = Some(appimage_re.clone());
+    }
+}
+
+fn parse_windows(win: &Value) -> Option<WindowsConf> {
+    let installer = match win["installer"].as_str()? {
+        "inno" => InstallerType::Inno,
+        "nsis" => InstallerType::Nsis,
+        _ => return None,
+    };
+    let (asset, asset_re) = pattern(&win["asset"])?;
+    let exe = matches(&win["exe"], &EXE)?;
+    let uninstall_key = matches(&win["uninstallKey"], &SAFE_KEY)?;
+    let default_dir = match &win["defaultDir"] {
+        Value::Null => None,
+        v => Some(matches(v, &DEFAULT_DIR)?),
+    };
+    Some(WindowsConf { installer, asset, uninstall_key, default_dir, exe, asset_re })
 }
 
 fn links(value: &Value) -> BTreeMap<String, String> {
@@ -268,24 +349,18 @@ fn array(value: &Value) -> &[Value] {
 fn parse_app(raw: &Value) -> Option<AppDef> {
     let id = matches(&raw["id"], &ID)?;
     let repo = matches(&raw["repo"], &REPO)?;
-    let win = &raw["windows"];
-    let installer = match win["installer"].as_str()? {
-        "inno" => InstallerType::Inno,
-        "nsis" => InstallerType::Nsis,
-        _ => return None,
-    };
-    let (asset, asset_re) = pattern(&win["asset"])?;
-    let exe = matches(&win["exe"], &EXE)?;
-    let uninstall_key = matches(&win["uninstallKey"], &SAFE_KEY)?;
-    let default_dir = match &win["defaultDir"] {
-        Value::Null => None,
-        v => Some(matches(v, &DEFAULT_DIR)?),
-    };
+    // En az bir sistem için kurulum bilgisi olmalı. (Robz Hub 0.1.6 ve öncesi Windows bölümünü şart koşar; yalnız
+    // Linux'ta çalışan bir uygulama o sürümlerde görünmez.)
+    let windows = parse_windows(&raw["windows"]);
+    let linux = parse_linux(&raw["linux"]);
+    if windows.is_none() && linux.is_none() {
+        return None;
+    }
     let name = string(&raw["name"], 60)?;
     let tagline = text(&raw["tagline"], 200)?;
     let notes = &raw["releaseNotes"];
 
-    Some(AppDef {
+    let mut def = AppDef {
         id,
         name,
         repo,
@@ -317,10 +392,12 @@ fn parse_app(raw: &Value) -> Option<AppDef> {
                 .map(str::to_string)
                 .collect(),
         },
-        windows: WindowsConf { installer, asset, uninstall_key, default_dir, exe, asset_re },
-        linux: parse_linux(&raw["linux"]),
+        windows,
+        linux,
         discovered: false,
-    })
+    };
+    fill_defaults(&mut def);
+    Some(def)
 }
 
 /// Ham JSON'u doğrulanmış kataloğa çevirir. Kullanılamıyorsa None.
@@ -456,28 +533,40 @@ mod tests {
         let raw: Value = serde_json::from_str(BUNDLED).unwrap();
         assert_eq!(raw["apps"].as_array().unwrap().len(), catalog.apps.len(), "katalogda reddedilen bir uygulama var");
         let dpi = catalog.app("robz-dpi").unwrap();
-        assert!(dpi.windows.asset_re.is_match("RobzDPI-Setup-0.1.0.exe"));
-        assert!(!dpi.windows.asset_re.is_match("RobzDPI-Setup.exe"));
-        assert_eq!(dpi.windows.default_dir.as_deref(), Some(r"%LOCALAPPDATA%\Robz DPI"));
+        let dpi_win = dpi.windows.as_ref().unwrap();
+        assert!(dpi_win.asset_re.is_match("RobzDPI-Setup-0.1.0.exe"));
+        assert!(dpi_win.asset_re.is_match("RobzDPI-Setup.exe"));
+        assert!(!dpi_win.asset_re.is_match("RobzDPI-Portable.exe"));
+        assert_eq!(dpi_win.default_dir.as_deref(), Some(r"%LOCALAPPDATA%\Robz DPI"));
         assert!(dpi.icon.as_deref().is_some_and(|u| u.starts_with("https://")));
         let linux = dpi.linux.as_ref().expect("Robz DPI'ın Linux paketi var");
-        assert_eq!((linux.package.as_str(), linux.exe.as_str()), ("robz-dpi", "robz-dpi"));
+        assert_eq!((linux.package.as_deref(), linux.exe.as_deref()), (Some("robz-dpi"), Some("robz-dpi")));
+        // Katalogda yazılmayan AppImage varsayılan adla aranır: robz-dpi bir gün AppImage yayınlarsa kurulur.
+        assert!(linux.appimage_re.as_ref().unwrap().is_match("RobzDPI-0.3.0-x86_64.AppImage"));
         assert!(linux.deb_re.as_ref().unwrap().is_match("RobzDPI-0.2.0-amd64.deb"));
-        assert!(!linux.deb_re.as_ref().unwrap().is_match("RobzDPI-Linux-amd64.deb"));
+        assert!(linux.deb_re.as_ref().unwrap().is_match("RobzDPI-Linux-amd64.deb"));
+        assert!(!linux.deb_re.as_ref().unwrap().is_match("RobzDPI-Linux-arm64.deb"));
         assert!(linux.rpm_re.as_ref().unwrap().is_match("RobzDPI-0.2.0-x86_64.rpm"));
-        assert!(catalog.app("robz-play").unwrap().linux.is_none());
+        // Linux bölümü yazılmayan uygulamaya varsayılanlar eklenir (Linux sürümü çıkarsa kendiliğinden kurulur).
+        let play_linux = catalog.app("robz-play").unwrap().linux.as_ref().unwrap();
+        assert_eq!(play_linux.package.as_deref(), Some("robz-play"));
+        assert!(play_linux.appimage_re.as_ref().unwrap().is_match("RobzPlay-1.0.0-amd64.AppImage"));
         let hub = catalog.hub.as_ref().unwrap();
-        assert!(hub.linux.deb.as_ref().unwrap().is_match("RobzHub-0.1.6-amd64.deb"));
-        assert!(hub.linux.rpm.as_ref().unwrap().is_match("RobzHub-0.1.6-x86_64.rpm"));
-        assert!(hub.linux.appimage.as_ref().unwrap().is_match("RobzHub-0.1.6-amd64.AppImage"));
+        // Sürümlerde artık her dosyanın tek (sabit) adı var; eski sürümlerin numaralı adları da eşleşir.
+        assert!(hub.asset_re.is_match("RobzHub-Setup.exe") && hub.asset_re.is_match("RobzHub-Setup-0.1.6.exe"));
+        assert!(!hub.asset_re.is_match("RobzHub-Setup.exe.sig"));
+        let deb = hub.linux.deb.as_ref().unwrap();
+        assert!(deb.is_match("RobzHub-Linux-amd64.deb") && deb.is_match("RobzHub-0.1.6-amd64.deb"));
+        assert!(hub.linux.rpm.as_ref().unwrap().is_match("RobzHub-Linux-x86_64.rpm"));
+        assert!(hub.linux.appimage.as_ref().unwrap().is_match("RobzHub-Linux-amd64.AppImage"));
         assert_eq!(catalog.bundles.len(), 1);
         assert!(catalog.bundles[0].image.as_deref().is_some_and(|u| u.starts_with("https://")));
-        let play = catalog.app("robz-play").unwrap();
-        assert!(play.windows.asset_re.is_match("RobzPlay-Setup.exe"));
-        assert_eq!(play.windows.installer, InstallerType::Nsis);
-        let vision = catalog.app("robz-vision").unwrap();
-        assert!(vision.windows.asset_re.is_match("RobzVision-Setup-1.6.0-x64.exe"));
-        assert!(!vision.windows.asset_re.is_match("RobzVision-Portable-1.6.0-x64.zip"));
+        let play = catalog.app("robz-play").unwrap().windows.as_ref().unwrap();
+        assert!(play.asset_re.is_match("RobzPlay-Setup.exe"));
+        assert_eq!(play.installer, InstallerType::Nsis);
+        let vision = catalog.app("robz-vision").unwrap().windows.as_ref().unwrap();
+        assert!(vision.asset_re.is_match("RobzVision-Setup-1.6.0-x64.exe"));
+        assert!(!vision.asset_re.is_match("RobzVision-Portable-1.6.0-x64.zip"));
         assert!(catalog.hub.unwrap().asset_re.is_match("RobzHub-Setup-0.2.0.exe"));
     }
 

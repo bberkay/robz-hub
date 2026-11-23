@@ -36,6 +36,34 @@
     });
   }
 
+  // ---- indirme: ziyaretçinin sistemine göre tek düğme ----
+  // Windows ve tanınmayan sistemlerde Windows kurulumu; Linux'ta Ubuntu/Debian için .deb, Fedora/SUSE için .rpm,
+  // diğer dağıtımlar (Arch, Manjaro…) için AppImage. Öteki biçimler düğmenin altında kalır.
+  const ua = navigator.userAgent || '';
+  const platform = (navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || '';
+  const linux = /linux|x11/i.test(`${platform} ${ua}`) && !/android|cros/i.test(ua);
+  const linuxKind = /ubuntu|debian|mint/i.test(ua) ? 'deb' : /fedora|suse|red hat/i.test(ua) ? 'rpm' : 'appimage';
+  let downloadKind = 'windows';
+  if (linux) {
+    downloadKind = linuxKind;
+    document.querySelectorAll('[data-download]').forEach((button) => {
+      button.href = button.dataset[`${linuxKind}Href`];
+      button.querySelector('[data-download-label]').textContent = button.dataset.linuxLabel;
+      button.querySelector('[data-download-size]').textContent = button.dataset[`${linuxKind}Size`] || '';
+    });
+    document.querySelectorAll('[data-other-formats]').forEach((row) => (row.hidden = true));
+    document.querySelectorAll('[data-other-formats-linux]').forEach((row) => {
+      row.hidden = false;
+      // Öne çıkan biçim altta tekrar edilmez.
+      row.querySelectorAll(`[data-other="${linuxKind}"]`).forEach((a) => {
+        const prev = a.previousElementSibling;
+        if (prev && prev.getAttribute('aria-hidden') === 'true') prev.remove();
+        else if (a.nextElementSibling && a.nextElementSibling.getAttribute('aria-hidden') === 'true') a.nextElementSibling.remove();
+        a.remove();
+      });
+    });
+  }
+
   // ---- GitHub ----
   const cacheKey = 'robzhub:gh:v1';
   async function api(path) {
@@ -70,8 +98,14 @@
       const version = release.tag_name.startsWith('v') ? release.tag_name : `v${release.tag_name}`;
       set('[data-hub-version]', version);
       document.querySelectorAll('[data-release-link]').forEach((a) => (a.href = release.html_url));
-      const setup = release.assets.find((a) => a.name === 'RobzHub-Setup.exe');
-      if (setup) set('[data-hub-size]', megabytes(setup.size));
+      const names = {
+        windows: 'RobzHub-Setup.exe',
+        deb: 'RobzHub-Linux-amd64.deb',
+        rpm: 'RobzHub-Linux-x86_64.rpm',
+        appimage: 'RobzHub-Linux-amd64.AppImage',
+      };
+      const file = release.assets.find((a) => a.name === names[downloadKind]);
+      if (file) set('[data-download-size]', megabytes(file.size));
     })
     .catch(() => {});
 

@@ -3,15 +3,17 @@
 //!
 //! GitHub'a saatte en çok bir kez tek bir istek gider: sahibin depo listesi (/users/<sahip>/repos). Kimliksiz
 //! isteklerde 304 yanıtı da saatlik 60 isteklik sınırdan düşer (ETag yalnız veriyi küçültür); bu yüzden liste bir
-//! saatten sık sorulmaz. Yeni bir depo görülünce yalnız onun sürüm listesi okunur. Son kararlı sürümünde Windows kurulum
-//! dosyası ("…Setup….exe") olan depolar uygulama sayılır; olmayanlar 6 saatte bir yeniden denenir.
+//! saatten sık sorulmaz. Bulunan her robz- deposu listede görünür; hangi sistemde kurulabileceğine sürümündeki
+//! dosyalar karar verir (platform::plan): Windows kurulum programı, .deb, .rpm ya da AppImage. Henüz sürümü yoksa
+//! "henüz sürüm yok" görünür.
 //!
 //! Bulunan uygulamanın kayıt anahtarı ve exe adı önceden bilinmez: kurulum, Windows'un "Yüklü uygulamalar" kaydında
-//! adıyla aranır (installs::detect), kurulum türü (Inno Setup ya da NSIS) indirilen dosyanın içinden okunur.
+//! adıyla aranır (installs::detect), kurulum türü (Inno Setup ya da NSIS) indirilen dosyanın içinden okunur. Linux'ta
+//! paket ve program adı depo adı sayılır (Tauri'nin adlandırması).
 //! Yalnız sahibin kendi depoları alınır; çatallar (fork), arşivlenmiş depolar ve Robz Hub'ın kendisi atlanır.
 
-use crate::catalog::{self, AppDef, Catalog, InstallerType, LinuxConf, ReleaseNotesConf, Text, WindowsConf};
-use crate::github::{self, Release};
+use crate::catalog::{self, AppDef, Catalog, ReleaseNotesConf, Text};
+use crate::github::Release;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -23,15 +25,6 @@ use std::time::Duration;
 pub const PREFIX: &str = "robz-";
 /// Depo listesi en çok bu sıklıkta sorulur.
 pub const CHECK_EVERY_MS: u64 = 60 * 60 * 1000;
-/// Kurulum dosyası bulunamayan depolar en çok bu sıklıkta yeniden denenir.
-pub const RETRY_NOT_APP_MS: u64 = 6 * 60 * 60 * 1000;
-/// Bulunan uygulamaların kurulum dosyası: adında "setup" ya da "install" geçen bir .exe.
-pub const ASSET: &str = r"(?i)^[A-Za-z0-9._ -]*(setup|install)[A-Za-z0-9._ -]*\.exe$";
-
-static ASSET_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(ASSET).expect("geçerli düzenli ifade"));
-/// Linux paketleri: 64 bit .deb ve .rpm.
-pub const DEB: &str = r"(?i)^[A-Za-z0-9._ -]*(amd64|x86_64)[A-Za-z0-9._ -]*\.deb$";
-pub const RPM: &str = r"(?i)^[A-Za-z0-9._ -]*(x86_64|amd64)[A-Za-z0-9._ -]*\.rpm$";
 static TRAILING_VERSION: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"(?i)[\s_-]*v?\d+(\.\d+){0,3}\s*$").expect("geçerli düzenli ifade"));
 
@@ -54,9 +47,6 @@ pub struct State {
     pub checked_at: u64,
     pub etag: Option<String>,
     pub repos: Vec<RepoInfo>,
-    /// Kurulum dosyası bulunamayan depolar ve son denendikleri zaman (ms).
-    #[serde(default)]
-    pub not_apps: BTreeMap<String, u64>,
     /// Sahibin bütün depolarının yıldız sayısı (anahtar: küçük harfle "sahip/depo"). Aynı listeden gelir; ek istek yok.
     #[serde(default)]
     pub stars: BTreeMap<String, u64>,
@@ -194,21 +184,10 @@ pub fn normalize(text: &str) -> String {
     text.chars().filter(|c| c.is_alphanumeric()).flat_map(char::to_lowercase).collect()
 }
 
-/// Depodan uygulama tanımı. Son kararlı sürümde Windows kurulum dosyası yoksa None.
+/// Depodan uygulama tanımı. Sürümü olmasa da bulunan her robz- deposu bir uygulamadır; hangi sistemde kurulacağına
+/// sürümdeki dosyalar karar verir (catalog::fill_defaults, platform::plan).
 pub fn app_def(info: &RepoInfo, releases: &[Release]) -> Option<AppDef> {
-    github::pick_latest(releases, &ASSET_RE)?;
     let slug = info.repo.rsplit('/').next()?.to_ascii_lowercase();
-    // Linux: son kararlı sürümde .deb ya da .rpm varsa; Tauri paketi ve programı depo adıyla adlandırır.
-    let deb = Regex::new(DEB).ok().filter(|r| github::pick_latest(releases, r).is_some());
-    let rpm = Regex::new(RPM).ok().filter(|r| github::pick_latest(releases, r).is_some());
-    let linux = (deb.is_some() || rpm.is_some()).then(|| LinuxConf {
-        deb: deb.as_ref().map(|_| DEB.to_string()),
-        rpm: rpm.as_ref().map(|_| RPM.to_string()),
-        package: slug.clone(),
-        exe: slug.clone(),
-        deb_re: deb,
-        rpm_re: rpm,
-    });
     if !catalog::ID.is_match(&slug) {
         return None;
     }
@@ -227,7 +206,7 @@ pub fn app_def(info: &RepoInfo, releases: &[Release]) -> Option<AppDef> {
     if let Some(homepage) = &info.homepage {
         links.insert("website".to_string(), homepage.clone());
     }
-    Some(AppDef {
+    let mut def = AppDef {
         id: slug,
         name,
         repo: info.repo.clone(),
@@ -244,17 +223,12 @@ pub fn app_def(info: &RepoInfo, releases: &[Release]) -> Option<AppDef> {
         screenshots: Vec::new(),
         links,
         release_notes: ReleaseNotesConf { from: None, languages: Vec::new() },
-        windows: WindowsConf {
-            installer: InstallerType::Auto,
-            asset: ASSET.to_string(),
-            uninstall_key: String::new(),
-            default_dir: None,
-            exe: String::new(),
-            asset_re: ASSET_RE.clone(),
-        },
-        linux,
+        windows: None,
+        linux: None,
         discovered: true,
-    })
+    };
+    catalog::fill_defaults(&mut def);
+    Some(def)
 }
 
 /// Bulunan uygulamaları kataloğun sonuna ekler. Katalogda aynı depo (ya da aynı kimlik) varsa katalogdaki kalır:
@@ -342,28 +316,26 @@ mod tests {
     }
 
     #[test]
-    fn needs_a_windows_installer() {
+    fn every_robz_repo_is_an_app() {
         let info = RepoInfo { repo: "robz/robz-dpi".into(), description: Some("DPI aracı".into()), homepage: None, license: None };
-        assert!(app_def(&info, &[release("Robz DPI 0.1.0", "0.1.0", &["notes.zip", "RobzDPI-Linux-amd64.deb"])]).is_none());
-        let def = app_def(&info, &[release("Robz DPI 0.1.0", "0.1.0", &["RobzDPI-Setup-0.1.0.exe", "SHA256SUMS.txt"])])
-            .expect("kurulum dosyası var");
+        // Henüz sürümü ya da kurulum dosyası olmayan depo da listede görünür.
+        let bare = app_def(&info, &[]).expect("sürümsüz depo da uygulama");
+        assert_eq!(bare.name, "Robz Dpi");
+        let def = app_def(&info, &[release("Robz DPI 0.1.0", "0.1.0", &["RobzDPI-Setup-0.1.0.exe", "SHA256SUMS.txt"])]).unwrap();
         assert_eq!(def.id, "robz-dpi");
         assert_eq!(def.name, "Robz DPI");
         assert_eq!(def.tagline.tr, "DPI aracı");
-        assert_eq!(def.windows.installer, InstallerType::Auto);
         assert!(def.discovered);
-        assert!(def.windows.asset_re.is_match("RobzDPI-Setup.exe"));
-        assert!(def.windows.asset_re.is_match("robz-new_install-x64.exe"));
-        assert!(!def.windows.asset_re.is_match("RobzDPI-Portable.exe"));
-        assert!(def.linux.is_none());
-        let with_linux = app_def(
-            &info,
-            &[release("Robz DPI 0.2.0", "0.2.0", &["RobzDPI-Setup.exe", "RobzDPI-0.2.0-amd64.deb", "RobzDPI-0.2.0-aarch64.rpm"])],
-        )
-        .unwrap();
-        let linux = with_linux.linux.expect("deb var");
-        assert_eq!(linux.package, "robz-dpi");
-        assert!(linux.deb_re.is_some() && linux.rpm_re.is_none());
+        let windows = def.windows.as_ref().unwrap();
+        assert_eq!(windows.installer, catalog::InstallerType::Auto);
+        assert!(windows.asset_re.is_match("RobzDPI-Setup.exe"));
+        assert!(windows.asset_re.is_match("robz-new_install-x64.exe"));
+        assert!(!windows.asset_re.is_match("RobzDPI-Portable.exe"));
+        let linux = def.linux.as_ref().unwrap();
+        assert_eq!((linux.package.as_deref(), linux.exe.as_deref()), (Some("robz-dpi"), Some("robz-dpi")));
+        assert!(linux.deb_re.as_ref().unwrap().is_match("RobzDPI-0.2.0-amd64.deb"));
+        assert!(!linux.rpm_re.as_ref().unwrap().is_match("RobzDPI-0.2.0-aarch64.rpm"));
+        assert!(linux.appimage_re.as_ref().unwrap().is_match("Robz_DPI_0.3.0_amd64.AppImage"));
     }
 
     #[test]

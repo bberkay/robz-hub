@@ -67,11 +67,29 @@ export function DownloadCount({ n }) {
   </span>`;
 }
 
-// "Linux'ta desteklenmiyor": uygulamanın yalnız Windows sürümü var.
-export function Unsupported({ large = false }) {
-  return html`<span class=${`unsupported ${large ? 'unsupported-lg' : ''}`} title=${t('status.unsupportedTitle')}>
-    <${Icon} name="info" size=${large ? 16 : 14} />${t('status.unsupported')}
+// Uygulama bu sistemde kurulamıyorsa nedeniyle: "Windows'ta desteklenmiyor", "Linux'ta desteklenmiyor" ya da
+// "Bu dağıtımda desteklenmiyor" (Linux sürümü var ama bu dağıtımın kurabileceği biçimde değil).
+export function unsupportedKey(app, platform) {
+  if (app.unsupported === 'distro') return 'status.unsupported.distro';
+  return platform === 'windows' ? 'status.unsupported.windows' : 'status.unsupported.linux';
+}
+
+export function Unsupported({ app, large = false }) {
+  const { data } = useStore();
+  const key = unsupportedKey(app, data.platform);
+  return html`<span class=${`unsupported ${large ? 'unsupported-lg' : ''}`} title=${t(`${key}.title`)}>
+    <${Icon} name="info" size=${large ? 16 : 14} />${t(key)}
   </span>`;
+}
+
+// Rust'ın düzenli ifadesi JavaScript'e: "(?i)" baştaki büyük/küçük harf bayrağına çevrilir. Çevrilemezse null.
+export function assetRegExp(pattern) {
+  if (!pattern) return null;
+  try {
+    return pattern.startsWith('(?i)') ? new RegExp(pattern.slice(4), 'i') : new RegExp(pattern);
+  } catch {
+    return null;
+  }
 }
 
 // GitHub yıldızı: sarı yıldız ve sayı.
@@ -354,7 +372,7 @@ export function AppActions({ def, large = false }) {
   // Bu sistemde kurulamayan uygulama (Linux'ta paketi olmayan): düğme yerine kısa bir not.
   if (!app.supported && !app.install.installed) {
     return html`<div class="actions">
-      <${Unsupported} />
+      <${Unsupported} app=${app} />
       <${Menu} label=${t('action.more')} items=${appMenuItems(def, app)} />
     </div>`;
   }
@@ -441,7 +459,8 @@ export function ReleaseNotes({ def, release, collapse = true }) {
 
 // Sürüm geçmişi: solda tarih ve etiket, sağda notlar (GitHub'ın sürümler sayfası düzeni).
 export function ReleaseTimeline({ def, app, releases }) {
-  const pattern = new RegExp(def.windows.asset);
+  // Bu sistemde kullanılan kurulum dosyası (boyutu ve indirme sayısı için); kurulamıyorsa yok.
+  const pattern = assetRegExp(app.assetPattern) || { test: () => false };
   return html`<ol class="timeline">
     ${releases.map((release) => {
       const asset = release.assets.find((a) => pattern.test(a.name));

@@ -7,6 +7,7 @@
 //! Robz Hub'ın dışında kurulmuş ya da uygulamanın kendi güncelleyicisiyle güncellenmiş kopyalar da aynı yoldan bulunur.
 
 use crate::catalog::{AppDef, InstallerType};
+use crate::platform::Method;
 use crate::error::{HubError, HubResult};
 use crate::version;
 use serde::Serialize;
@@ -395,20 +396,40 @@ pub fn running_paths(names: &[String]) -> HashMap<String, Vec<u32>> {
     found
 }
 
-/// Linux: /proc/<pid>/exe bağlantısı, çalışan programın tam yolunu verir.
+/// Linux: /proc/<pid>/exe bağlantısı, çalışan programın tam yolunu verir. AppImage'da program, AppImage'ın açtığı
+/// geçici klasörden çalışır; onu AppImage'a bağlayan, ortamındaki APPIMAGE=<dosya> değişkenidir.
 #[cfg(target_os = "linux")]
 pub fn running_paths(names: &[String]) -> HashMap<String, Vec<u32>> {
     let wanted: HashSet<String> = names.iter().map(|n| n.to_lowercase()).collect();
+    let appimages = wanted.iter().any(|n| n.ends_with(".appimage"));
     let mut found: HashMap<String, Vec<u32>> = HashMap::new();
+    let mut add = |path: &str, pid: u32| {
+        let pids = found.entry(norm_path(path)).or_default();
+        if !pids.contains(&pid) {
+            pids.push(pid);
+        }
+    };
+    let name_of = |path: &str| Path::new(path).file_name().map(|n| n.to_string_lossy().to_lowercase()).unwrap_or_default();
     let Ok(entries) = std::fs::read_dir("/proc") else { return found };
     for entry in entries.flatten() {
         let Some(pid) = entry.file_name().to_str().and_then(|s| s.parse::<u32>().ok()) else { continue };
-        let Ok(exe) = std::fs::read_link(entry.path().join("exe")) else { continue };
-        // Güncellenirken eski dosya silinmişse yolun sonuna " (deleted)" eklenir.
-        let exe = exe.to_string_lossy().trim_end_matches(" (deleted)").to_string();
-        let name = Path::new(&exe).file_name().map(|n| n.to_string_lossy().to_lowercase()).unwrap_or_default();
-        if wanted.contains(&name) {
-            found.entry(norm_path(&exe)).or_default().push(pid);
+        if let Ok(exe) = std::fs::read_link(entry.path().join("exe")) {
+            // Güncellenirken eski dosya silinmişse yolun sonuna " (deleted)" eklenir.
+            let exe = exe.to_string_lossy().trim_end_matches(" (deleted)").to_string();
+            if wanted.contains(&name_of(&exe)) {
+                add(&exe, pid);
+            }
+        }
+        if appimages {
+            let Ok(environ) = std::fs::read(entry.path().join("environ")) else { continue };
+            for var in environ.split(|b| *b == 0) {
+                if let Some(value) = var.strip_prefix(b"APPIMAGE=") {
+                    let file = String::from_utf8_lossy(value).to_string();
+                    if wanted.contains(&name_of(&file)) {
+                        add(&file, pid);
+                    }
+                }
+            }
         }
     }
     found
@@ -470,7 +491,7 @@ pub fn detect(def: &AppDef) -> InstallInfo {
 }
 
 fn detect_windows(def: &AppDef) -> InstallInfo {
-    let win = &def.windows;
+    let Some(win) = &def.windows else { return InstallInfo::default() };
     if win.installer == InstallerType::Auto {
         return detect_by_name(def);
     }
@@ -571,11 +592,21 @@ fn spawn_error(code: &str, error: std::io::Error) -> HubError {
 }
 
 /// İndirilen kurulum dosyasını sessiz kipte çalıştırır; bitene kadar bekler.
-pub async fn run_installer(def: &AppDef, file: &Path) -> HubResult<()> {
-    if cfg!(target_os = "linux") {
-        return crate::linux::install(file).await;
+/// Linux'ta: sistem paketi pkexec ile paket yöneticisine kurdurulur, AppImage kullanıcının klasörüne yerleştirilir.
+/// `icon`: AppImage'ın uygulama menüsü girişi için simge (içerik ve uzantı).
+pub async fn run_installer(
+    def: &AppDef,
+    file: &Path,
+    method: Method,
+    version: &str,
+    icon: Option<(Vec<u8>, &str)>,
+) -> HubResult<()> {
+    match method {
+        Method::Deb | Method::Rpm => return crate::linux::install(file).await,
+        Method::AppImage => return crate::linux::install_appimage(def, file, version, icon),
+        Method::Windows => {}
     }
-    let kind = match def.windows.installer {
+    let kind = match def.windows.as_ref().map_or(InstallerType::Auto, |w| w.installer) {
         InstallerType::Auto => sniff_installer(file).unwrap_or(InstallerType::Auto),
         kind => kind,
     };
@@ -592,7 +623,11 @@ pub async fn run_installer(def: &AppDef, file: &Path) -> HubResult<()> {
 /// klasöre kopyalayıp hemen döndüğü için çıkış koduna değil, exe'nin kaybolmasına bakılır.
 pub async fn run_uninstaller(def: &AppDef, info: &InstallInfo) -> HubResult<()> {
     if cfg!(target_os = "linux") {
-        return crate::linux::uninstall(def).await;
+        return if info.source == Some("appimage") {
+            crate::linux::uninstall_appimage(def)
+        } else {
+            crate::linux::uninstall(def).await
+        };
     }
     let (Some(uninstaller), Some(dir), Some(exe)) = (&info.uninstaller, &info.dir, &info.exe_path) else {
         return Err(HubError::new("uninstaller-missing"));
@@ -601,7 +636,7 @@ pub async fn run_uninstaller(def: &AppDef, info: &InstallInfo) -> HubResult<()> 
     if !is_file(uninstaller) || !is_inside(uninstaller, dir) {
         return Err(HubError::new("uninstaller-missing"));
     }
-    let kind = match def.windows.installer {
+    let kind = match def.windows.as_ref().map_or(InstallerType::Auto, |w| w.installer) {
         InstallerType::Auto => uninstaller_kind(uninstaller),
         kind => kind,
     };
@@ -627,6 +662,10 @@ pub fn launch(info: &InstallInfo) -> HubResult<()> {
         command.current_dir(dir);
     } else if let Some(home) = std::env::var_os("HOME") {
         command.current_dir(home);
+    }
+    // AppImage FUSE ile açılır; FUSE yoksa (bazı en küçük kurulumlarda) kendini geçici klasöre açıp çalışır.
+    if exe.ends_with(".AppImage") && !Path::new("/dev/fuse").exists() {
+        command.env("APPIMAGE_EXTRACT_AND_RUN", "1");
     }
     #[cfg(windows)]
     command.creation_flags(DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP);

@@ -4,12 +4,12 @@
 #   2. CHANGELOG.md'ye "## X.Y.Z" başlığıyla notları yaz
 #   3. git tag vX.Y.Z && git push origin vX.Y.Z
 #
-# Robz Hub kendi güncellemesini bu sürümdeki dosyalardan alır (catalog.json -> hub.asset ve hub.linux):
-#   Windows  RobzHub-Setup-X.Y.Z.exe
-#   Linux    RobzHub-X.Y.Z-amd64.deb, RobzHub-X.Y.Z-x86_64.rpm, RobzHub-X.Y.Z-amd64.AppImage
-# Dosya adlarını değiştirme. Sabit adlar (RobzHub-Setup.exe, RobzHub-Linux-…) README ve web sitesindeki
-# ".../releases/latest/download/…" bağlantılarının hep en son sürümü vermesi içindir. GitHub her dosyanın SHA-256
-# özetini API'de verir; Robz Hub indirdiğini onunla doğrular.
+# Her dosyanın tek, sabit adı vardır; README ve web sitesindeki ".../releases/latest/download/…" bağlantıları hep en
+# son sürümü verir, Robz Hub da kendi güncellemesini aynı dosyalardan alır (catalog.json -> hub.asset ve hub.linux):
+#   Windows  RobzHub-Setup.exe
+#   Linux    RobzHub-Linux-amd64.deb (Debian, Ubuntu), RobzHub-Linux-x86_64.rpm (Fedora, openSUSE),
+#            RobzHub-Linux-amd64.AppImage (diğer bütün dağıtımlar)
+# Dosya adlarını değiştirme. GitHub her dosyanın SHA-256 özetini API'de verir; Robz Hub indirdiğini onunla doğrular.
 
 name: Sürüm
 
@@ -65,7 +65,7 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force out | Out-Null
           $setup = Get-ChildItem src-tauri/target/release/bundle/nsis/*-setup.exe | Select-Object -First 1
-          foreach ($name in "RobzHub-Setup-$env:VERSION.exe", "RobzHub-Setup.exe") { Copy-Item $setup.FullName "out/$name" }
+          Copy-Item $setup.FullName out/RobzHub-Setup.exe
       - uses: actions/upload-artifact@v4
         with:
           name: windows
@@ -102,9 +102,9 @@ jobs:
           deb=$(ls "$bundle"/deb/*.deb | head -n 1)
           rpm=$(ls "$bundle"/rpm/*.rpm | head -n 1)
           appimage=$(ls "$bundle"/appimage/*.AppImage | head -n 1)
-          cp "$deb" "out/RobzHub-$VERSION-amd64.deb";            cp "$deb" out/RobzHub-Linux-amd64.deb
-          cp "$rpm" "out/RobzHub-$VERSION-x86_64.rpm";           cp "$rpm" out/RobzHub-Linux-x86_64.rpm
-          cp "$appimage" "out/RobzHub-$VERSION-amd64.AppImage";  cp "$appimage" out/RobzHub-Linux-amd64.AppImage
+          cp "$deb" out/RobzHub-Linux-amd64.deb
+          cp "$rpm" out/RobzHub-Linux-x86_64.rpm
+          cp "$appimage" out/RobzHub-Linux-amd64.AppImage
           chmod +x out/*.AppImage
           ls -la out
       - uses: actions/upload-artifact@v4

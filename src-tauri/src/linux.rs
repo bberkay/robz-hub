@@ -1,9 +1,13 @@
-//! Linux'ta uygulama paketleri (.deb / .rpm).
+//! Linux'ta uygulamalar: sistem paketi (.deb / .rpm) ya da AppImage.
 //!
-//! Kurulu sürüm paket veritabanından okunur: dpkg'nin durum dosyası doğrudan, rpm ise `rpm -q` ile (veritabanı
-//! değişmedikçe yeniden sorulmaz; 5 sn'lik denetim ucuz kalır). Kurma ve kaldırma sistemin paket yöneticisine
-//! (apt, dnf, zypper ya da rpm) yaptırılır; yönetici yetkisini pkexec ister: masaüstünün parola penceresi açılır,
-//! Robz Hub parolayı görmez.
+//! Paketler: kurulu sürüm paket veritabanından okunur; dpkg'nin durum dosyası doğrudan, rpm ise `rpm -q` ile
+//! (veritabanı değişmedikçe yeniden sorulmaz; 5 sn'lik denetim ucuz kalır). Kurma ve kaldırma sistemin paket
+//! yöneticisine (apt, dnf, zypper ya da rpm) yaptırılır; yönetici yetkisini pkexec ister: masaüstünün parola
+//! penceresi açılır, Robz Hub parolayı görmez.
+//!
+//! AppImage: her dağıtımda (Arch, Manjaro…) çalışır. Kullanıcının kendi klasörüne kurulur, parola istemez:
+//! ~/.local/share/robz-hub/apps/<kimlik>/<kimlik>.AppImage, yanında sürümü yazan "version" dosyası ve uygulama
+//! menüsü için ~/.local/share/applications/robz-hub-<kimlik>.desktop.
 //!
 //! Kod her sistemde derlenir (testler Windows'ta da çalışır); yalnız Linux'ta kullanılır.
 #![cfg_attr(not(target_os = "linux"), allow(dead_code))]
@@ -112,19 +116,130 @@ fn installed_version(package: &str) -> Option<String> {
     }
 }
 
+/// Kurulu mu: önce sistem paketi, yoksa Robz Hub'ın kurduğu AppImage.
 pub fn detect(def: &AppDef) -> InstallInfo {
-    let Some(linux) = &def.linux else { return InstallInfo::default() };
-    let Some(raw) = installed_version(&linux.package) else { return InstallInfo::default() };
-    let exe = find_program(&linux.exe);
+    if let Some(linux) = &def.linux {
+        if let Some(raw) = linux.package.as_deref().and_then(installed_version) {
+            let exe = linux.exe.as_deref().and_then(find_program);
+            return InstallInfo {
+                installed: true,
+                version: package_version(&raw),
+                dir: exe.as_deref().and_then(Path::parent).map(|d| d.display().to_string()),
+                exe_path: exe.map(|p| p.display().to_string()),
+                uninstaller: None,
+                scope: Some("machine"),
+                source: Some("package"),
+            };
+        }
+    }
+    detect_appimage(&def.id)
+}
+
+// ---- AppImage ---------------------------------------------------------------------------------------------------------
+
+/// Kullanıcının veri klasörü: $XDG_DATA_HOME ya da ~/.local/share
+fn data_home() -> Option<PathBuf> {
+    std::env::var_os("XDG_DATA_HOME")
+        .filter(|v| !v.is_empty())
+        .map(PathBuf::from)
+        .or_else(|| std::env::var_os("HOME").filter(|v| !v.is_empty()).map(|h| PathBuf::from(h).join(".local/share")))
+}
+
+pub fn appimage_dir(id: &str) -> Option<PathBuf> {
+    data_home().map(|d| d.join("robz-hub").join("apps").join(id))
+}
+
+fn appimage_file(id: &str) -> Option<PathBuf> {
+    appimage_dir(id).map(|d| d.join(format!("{id}.AppImage")))
+}
+
+fn desktop_file(id: &str) -> Option<PathBuf> {
+    data_home().map(|d| d.join("applications").join(format!("robz-hub-{id}.desktop")))
+}
+
+pub fn detect_appimage(id: &str) -> InstallInfo {
+    let (Some(dir), Some(file)) = (appimage_dir(id), appimage_file(id)) else { return InstallInfo::default() };
+    if !file.is_file() {
+        return InstallInfo::default();
+    }
+    let version = std::fs::read_to_string(dir.join("version")).ok().and_then(|v| version::clean(v.trim()));
     InstallInfo {
         installed: true,
-        version: package_version(&raw),
-        dir: exe.as_deref().and_then(Path::parent).map(|d| d.display().to_string()),
-        exe_path: exe.map(|p| p.display().to_string()),
+        version,
+        dir: Some(dir.display().to_string()),
+        exe_path: Some(file.display().to_string()),
         uninstaller: None,
-        scope: Some("machine"),
-        source: Some("package"),
+        scope: Some("user"),
+        source: Some("appimage"),
     }
+}
+
+/// .desktop dosyasında tırnak içinde özel anlamı olan karakterler kaçırılır (masaüstü giriş belirtimi).
+fn desktop_quote(path: &Path) -> String {
+    let mut out = String::from('"');
+    for c in path.display().to_string().chars() {
+        if matches!(c, '"' | '`' | '$' | '\\') {
+            out.push('\\');
+        }
+        out.push(c);
+    }
+    out.push('"');
+    out
+}
+
+pub fn desktop_entry(def: &AppDef, exe: &Path, icon: Option<&Path>) -> String {
+    let line = |s: &str| s.replace(['\n', '\r'], " ");
+    let mut text = format!(
+        "[Desktop Entry]\nType=Application\nName={}\nComment={}\nComment[tr]={}\nExec={} %U\nTerminal=false\nCategories=Utility;\nX-Robz-Hub-App={}\n",
+        line(&def.name),
+        line(&def.tagline.en),
+        line(&def.tagline.tr),
+        desktop_quote(exe),
+        def.id,
+    );
+    if let Some(icon) = icon {
+        text.push_str(&format!("Icon={}\n", icon.display()));
+    }
+    text
+}
+
+/// İndirilen AppImage'ı kurar ya da günceller: dosya yenisiyle değiştirilir, çalıştırılabilir yapılır, sürüm ve uygulama
+/// menüsü girişi yazılır. `icon`: uygulamanın simgesi (dosya içeriği ve uzantısı), varsa.
+pub fn install_appimage(def: &AppDef, file: &Path, version: &str, icon: Option<(Vec<u8>, &str)>) -> HubResult<()> {
+    let io = |e: std::io::Error| HubError::with("installer-failed", e);
+    let dir = appimage_dir(&def.id).ok_or_else(|| HubError::with("installer-failed", "HOME yok"))?;
+    std::fs::create_dir_all(&dir).map_err(io)?;
+    let target = dir.join(format!("{}.AppImage", def.id));
+    let temp = dir.join(format!("{}.AppImage.new", def.id));
+    std::fs::copy(file, &temp).map_err(io)?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(&temp, std::fs::Permissions::from_mode(0o755)).map_err(io)?;
+    }
+    std::fs::rename(&temp, &target).map_err(io)?;
+    std::fs::write(dir.join("version"), version).map_err(io)?;
+
+    let icon_path = icon.and_then(|(bytes, ext)| {
+        let path = dir.join(format!("icon.{ext}"));
+        std::fs::write(&path, bytes).ok().map(|_| path)
+    });
+    if let Some(desktop) = desktop_file(&def.id) {
+        if let Some(parent) = desktop.parent() {
+            let _ = std::fs::create_dir_all(parent);
+        }
+        // Menü girişi yazılamazsa da uygulama kuruludur; Robz Hub'dan başlatılabilir.
+        let _ = std::fs::write(&desktop, desktop_entry(def, &target, icon_path.as_deref()));
+    }
+    Ok(())
+}
+
+pub fn uninstall_appimage(def: &AppDef) -> HubResult<()> {
+    if let Some(desktop) = desktop_file(&def.id) {
+        let _ = std::fs::remove_file(desktop);
+    }
+    let dir = appimage_dir(&def.id).ok_or_else(|| HubError::new("not-installed"))?;
+    std::fs::remove_dir_all(&dir).map_err(|e| HubError::with("uninstall-failed", e))
 }
 
 // ---- kurma ve kaldırma ------------------------------------------------------------------------------------------------
@@ -202,11 +317,11 @@ pub async fn install(file: &Path) -> HubResult<()> {
 }
 
 pub async fn uninstall(def: &AppDef) -> HubResult<()> {
-    let linux = def.linux.as_ref().ok_or_else(|| HubError::new("unsupported"))?;
-    let (program, args) = remove_command(&linux.package)?;
+    let package = def.linux.as_ref().and_then(|l| l.package.as_deref()).ok_or_else(|| HubError::new("unsupported"))?;
+    let (program, args) = remove_command(package)?;
     run_as_admin("uninstall-failed", program, args).await?;
     for _ in 0..20 {
-        if installed_version(&linux.package).is_none() {
+        if installed_version(package).is_none() {
             return Ok(());
         }
         tokio::time::sleep(Duration::from_millis(500)).await;
@@ -228,5 +343,52 @@ mod tests {
         assert!(!installed.contains_key("removed"));
         assert_eq!(package_version("1:0.2.0-1").as_deref(), Some("0.2.0"));
         assert_eq!(package_version("2.36-9+deb12u4").as_deref(), Some("2.36"));
+    }
+
+    #[test]
+    fn writes_a_menu_entry_for_appimages() {
+        let catalog = crate::catalog::parse_str(crate::catalog::BUNDLED).unwrap();
+        let def = catalog.app("robz-dpi").unwrap();
+        let entry = desktop_entry(def, Path::new("/home/a b/.local/share/robz-hub/apps/robz-dpi/robz-dpi.AppImage"), None);
+        assert!(entry.starts_with("[Desktop Entry]\nType=Application\nName=Robz DPI\n"));
+        assert!(entry.contains("Exec=\"/home/a b/.local/share/robz-hub/apps/robz-dpi/robz-dpi.AppImage\" %U\n"));
+        assert!(!entry.contains("Icon="));
+        assert_eq!(desktop_quote(Path::new("/x/$a\"b")), "\"/x/\\$a\\\"b\"");
+    }
+
+    // Gerçek dosya işlemleri: kurulum, sürüm, güncelleme, kaldırma (Linux'ta; ev klasörü geçici bir klasöre çevrilir).
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn installs_updates_and_removes_appimages() {
+        let home = std::env::temp_dir().join(format!("robzhub-appimage-{}", std::process::id()));
+        std::fs::create_dir_all(&home).unwrap();
+        std::env::set_var("XDG_DATA_HOME", &home);
+        let catalog = crate::catalog::parse_str(crate::catalog::BUNDLED).unwrap();
+        let def = catalog.app("robz-dpi").unwrap();
+        let download = home.join("indirilen.AppImage");
+
+        std::fs::write(&download, b"v1").unwrap();
+        install_appimage(def, &download, "0.2.0", Some((b"png".to_vec(), "png"))).unwrap();
+        let info = detect_appimage(&def.id);
+        assert!(info.installed);
+        assert_eq!(info.version.as_deref(), Some("0.2.0"));
+        assert_eq!(info.source, Some("appimage"));
+        let exe = PathBuf::from(info.exe_path.unwrap());
+        {
+            use std::os::unix::fs::PermissionsExt;
+            assert_eq!(std::fs::metadata(&exe).unwrap().permissions().mode() & 0o111, 0o111);
+        }
+        let desktop = std::fs::read_to_string(home.join("applications/robz-hub-robz-dpi.desktop")).unwrap();
+        assert!(desktop.contains("Icon=") && desktop.contains("robz-dpi.AppImage"));
+
+        std::fs::write(&download, b"v2").unwrap();
+        install_appimage(def, &download, "0.3.0", None).unwrap();
+        assert_eq!(std::fs::read(&exe).unwrap(), b"v2");
+        assert_eq!(detect_appimage(&def.id).version.as_deref(), Some("0.3.0"));
+
+        uninstall_appimage(def).unwrap();
+        assert!(!detect_appimage(&def.id).installed);
+        assert!(!home.join("applications/robz-hub-robz-dpi.desktop").exists());
+        let _ = std::fs::remove_dir_all(&home);
     }
 }

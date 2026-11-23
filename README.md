@@ -73,8 +73,19 @@
 
 Liste GitHub'daki [`catalog.json`](catalog.json) dosyasından gelir. Yeni bir Robz uygulaması kataloğa eklendiğinde,
 Robz Hub'ı güncellemeye gerek kalmadan bütün kullanıcıların listesinde belirir. Kataloğa eklenmemiş olsa bile GitHub'da
-`robz-` ile başlayan herkese açık bir depo, Windows kurulum dosyası olan bir sürüm yayınladığında kendiliğinden
-listeye girer.
+`robz-` ile başlayan her herkese açık depo listede kendiliğinden görünür.
+
+Robz Hub her uygulamanın sürümündeki dosyalara bakar ve senin sistemine uyanı seçer; tek bir **Kur** düğmesi görürsün:
+
+| Sistem | Kurulan dosya | Yoksa |
+|---|---|---|
+| Windows | `…Setup….exe` | **Windows'ta desteklenmiyor** |
+| Debian, Ubuntu, Mint | `.deb` (yoksa AppImage) | **Linux'ta desteklenmiyor** |
+| Fedora, openSUSE | `.rpm` (yoksa AppImage) | **Linux'ta desteklenmiyor** |
+| Arch, Manjaro ve diğerleri | AppImage | Yalnız .deb/.rpm varsa **Bu dağıtımda desteklenmiyor** |
+
+Bir uygulama sonradan yeni bir biçim yayınlarsa (ör. sürümüne AppImage eklerse) Robz Hub bir sonraki denetimde onu
+kendiliğinden kullanır; katalog değişmez.
 
 ## Neler yapar
 
@@ -107,8 +118,8 @@ listeye girer.
     <td valign="top"><b>İndirme ve yıldız sayıları</b><br>
       Her uygulamanın GitHub'daki toplam indirme ve yıldız sayısı uygulama sayfasında ve ana sayfadaki kartında.</td>
     <td valign="top"><b>Linux'ta da çalışır</b><br>
-      .deb, .rpm ve AppImage. Linux paketi olan uygulamalar paket yöneticisiyle kurulur; olmayanlar
-      <b>Linux'ta desteklenmiyor</b> yazar.</td>
+      .deb, .rpm ve AppImage; Arch gibi bütün dağıtımlarda. Uygulamalar sürümlerindeki dosyaya göre kurulur;
+      sistemine uymayanlarda <b>desteklenmiyor</b> yazar.</td>
   </tr>
   <tr>
     <td valign="top"><b>Küçük ve hızlı</b><br>
@@ -141,10 +152,12 @@ sudo dnf install ./RobzHub-Linux-x86_64.rpm    # Fedora
 chmod +x RobzHub-Linux-amd64.AppImage && ./RobzHub-Linux-amd64.AppImage
 ```
 
-- Linux'ta uygulamalar sistem paketi olarak kurulur; kurarken ve kaldırırken sistemin parola penceresi açılır
-  (pkexec). Robz Hub parolayı görmez.
-- Şimdilik Linux paketi olan uygulama **Robz DPI**'dır. Robz Play ve Robz Vision yalnız Windows'ta çalışır; Linux'ta
-  **Linux'ta desteklenmiyor** yazar.
+- Debian ve Fedora ailesinde uygulamalar sistem paketi (.deb, .rpm) olarak kurulur; kurarken ve kaldırırken sistemin
+  parola penceresi açılır (pkexec), Robz Hub parolayı görmez.
+- Arch, Manjaro ve diğer dağıtımlarda uygulamanın AppImage'ı kurulur: parola istemez, senin klasörüne
+  (`~/.local/share/robz-hub/apps`) yerleşir ve uygulama menüsüne eklenir. Kaldırınca ikisi de silinir.
+- Şimdilik Linux sürümü olan uygulama **Robz DPI**'dır (.deb, .rpm ve AppImage). Robz Play ve Robz Vision yalnız
+  Windows'ta çalışır; Linux'ta **Linux'ta desteklenmiyor** yazar.
 - Robz Hub kendini de günceller: AppImage dosyası yenisiyle değişir, .deb ve .rpm paket yöneticisiyle kurulur.
 - Tepsi simgesi için `libayatana-appindicator3` gerekir (.deb ve .rpm onu birlikte kurar); yoksa Robz Hub tepsisiz
   çalışır.
@@ -329,11 +342,15 @@ bir kayıt ekle ve en üstteki `revision` değerini bir artır. Çalışan Robz 
 içinde (ya da **Güncellemeleri denetle**'ye basınca) alır.
 
 **Kendiliğinden bulma.** Kataloğa eklemesen de olur: Robz Hub, sahibin GitHub'daki herkese açık `robz-` depolarını saatte
-en çok bir kez tek istekle listeler. Son kararlı sürümünde adında `setup` ya da `install` geçen bir `.exe` olan
-depo uygulama olarak eklenir; adı sürüm adından, açıklaması deponun açıklamasından gelir. Kayıt anahtarı Windows'un
-yüklü uygulamalar listesinde adıyla aranır, kurulum türü (Inno Setup ya da NSIS) indirilen dosyanın içinden okunur.
-Sürümde 64 bit `.deb` ya da `.rpm` varsa Linux'ta da kurulur (paket ve program adı depo adı sayılır). Çatallar,
-arşivlenmiş depolar ve Robz Hub'ın kendisi atlanır. Aynı depo kataloğa eklenince katalogdaki kayıt geçerli olur.
+en çok bir kez tek istekle listeler ve her birini uygulama olarak gösterir (henüz sürümü yoksa "henüz sürüm yok" der).
+Adı sürüm adından, açıklaması deponun açıklamasından gelir. Çatallar, arşivlenmiş depolar ve Robz Hub'ın kendisi
+atlanır. Aynı depo kataloğa eklenince katalogdaki kayıt geçerli olur.
+
+**Hangi dosya kullanılır.** Katalogda yazılmayan her sistem için varsayılan dosya adları aranır: Windows'ta adında
+`setup` ya da `install` geçen `.exe`, Linux'ta adında `amd64` ya da `x86_64` geçen `.deb`, `.rpm` ve `.AppImage`.
+Karar sürümdeki dosyalara göre verilir; uygulama sonradan yeni bir biçim yayınlarsa katalog değişmeden kullanılır.
+Windows'ta kayıt anahtarı yüklü uygulamalar listesinde adıyla aranır, kurulum türü (Inno Setup ya da NSIS) indirilen
+dosyanın içinden okunur; Linux'ta paket ve program adı depo adı sayılır (Tauri'nin adlandırması).
 
 <details>
 <summary><b>Katalog alanları</b></summary>
@@ -352,8 +369,10 @@ arşivlenmiş depolar ve Robz Hub'ın kendisi atlanır. Aynı depo kataloğa ekl
 | `windows.asset` | Sürümdeki kurulum dosyasının adı için düzenli ifade (`^RobzPlay-Setup\\.exe$`). |
 | `windows.uninstallKey` | `HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall` altındaki anahtar (Inno: `{AppId}_is1`). |
 | `windows.defaultDir`, `windows.exe` | Kayıt yoksa bakılacak klasör (`%LOCALAPPDATA%\Programs\…`) ve çalıştırılacak exe. |
-| `linux.deb`, `linux.rpm` | Linux paketlerinin adı için düzenli ifade (`^RobzDPI-[0-9.]+-amd64\\.deb$`). Yoksa uygulama Linux'ta desteklenmiyor görünür. |
-| `linux.package`, `linux.exe` | Paket adı (`robz-dpi`) ve `/usr/bin` altındaki program adı. |
+| `linux.deb`, `linux.rpm`, `linux.appimage` | Linux dosyalarının adı için düzenli ifade (`^RobzDPI-Linux-amd64\\.deb$`). Yazılmazsa varsayılan adlar aranır. |
+| `linux.package`, `linux.exe` | Paket adı (`robz-dpi`) ve `/usr/bin` altındaki program adı; yazılmazsa depo adı. |
+
+`windows` ya da `linux` bölümlerinden en az biri olmalı; yazılmayan sistem için varsayılan dosya adları aranır.
 
 `bundles` birlikte kullanılan uygulamaları, `announcements` ise duyuruları (yeni uygulama, yayın, Discord daveti gibi;
 `title`, `body`, `url`, `linkLabel`, `date`) ana sayfanın tanıtım alanında sırayla gösterir. İkisi de arka plan için
@@ -404,10 +423,10 @@ site/                web sitesi (catalog.json'dan üretilir)
 ```
 
 **Sürüm yayınlamak:** sürüm numarasını `package.json`, `src-tauri/Cargo.toml` ve `src-tauri/tauri.conf.json`'da aynı
-yap, [`CHANGELOG.md`](CHANGELOG.md)'ye notları yaz ve `vX.Y.Z` etiketini gönder. İş akışı Windows kurulum dosyasını
-(`RobzHub-Setup-X.Y.Z.exe`, `RobzHub-Setup.exe`) ve Linux paketlerini (`RobzHub-X.Y.Z-amd64.deb`,
-`RobzHub-X.Y.Z-x86_64.rpm`, `RobzHub-X.Y.Z-amd64.AppImage` ve `RobzHub-Linux-…` sabit adları) derleyip tek sürümde
-yayınlar; çalışan Robz Hub'lar yeni sürümü Güncellemeler sayfasında gösterir.
+yap, [`CHANGELOG.md`](CHANGELOG.md)'ye notları yaz ve `vX.Y.Z` etiketini gönder. İş akışı dört dosyayı derleyip tek
+sürümde yayınlar: `RobzHub-Setup.exe` (Windows), `RobzHub-Linux-amd64.deb`, `RobzHub-Linux-x86_64.rpm` ve
+`RobzHub-Linux-amd64.AppImage`, yanında `SHA256SUMS.txt`. Her dosyanın tek, sabit adı vardır: README ve sitedeki
+bağlantılar hep en son sürümü verir, çalışan Robz Hub'lar da kendilerini aynı dosyalardan günceller.
 
 ## Destek ve katkı
 
